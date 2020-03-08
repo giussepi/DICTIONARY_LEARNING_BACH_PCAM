@@ -1,0 +1,21 @@
+
+# dl_algoriths
+dl_algorithms/*
+!dl_algorithms/__init__.py
+
+# Emacs files
+*~
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
