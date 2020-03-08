@@ -19,16 +19,20 @@ cd dl_algorithms
 
 repository_url="https://github.com/giussepi/LC-KSVD.git"
 repository_folder="LC-KSVD"
+repository_folder_renamed="lc_ksvd"
 
-if [ ! -d $repository_folder ]; then
+if [ ! -d $repository_folder_renamed ]; then
     git clone $repository_url
-    pip install -r $repository_folder/requirements.txt
-    touch $repository_folder/__init__.py
+    mv $repository_folder $repository_folder_renamed
+    cd $repository_folder_renamed
+    touch __init__.py
 else
-    cd $repository_folder
+    cd $repository_folder_renamed
     git pull --rebase origin master
-    pip install -r requirements.txt
-    cd ..
 fi
+
+pip install -r requirements.txt
+cd ..
+
 
 echo "Third-party repositories installed/updated successfully"
