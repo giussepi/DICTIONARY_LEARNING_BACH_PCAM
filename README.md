@@ -1,4 +1,10 @@
-# dl_stage_1
+# BACH_ICIAR_2018
+
+Attempt to improve classification results on
+[ICIAR 2018 Grand Challenge on Breast Cancer Histology images]
+(https://iciar2018-challenge.grand-challenge.org/Dataset/) by using Dictionary
+Learning techniques.
+
 
 ## Installation
 
