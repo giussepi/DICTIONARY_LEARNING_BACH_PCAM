@@ -1,3 +1,5 @@
+# numpy files
+*.npy
 
 # dl_algoriths
 dl_algorithms/*
