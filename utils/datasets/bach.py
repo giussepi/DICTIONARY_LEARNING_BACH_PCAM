@@ -9,7 +9,6 @@ https://iciar2018-challenge.grand-challenge.org/Dataset/
 
 import json
 import os
-import pickle
 import shutil
 
 import matplotlib.pyplot as plt
@@ -41,7 +40,6 @@ class MiniPatch:
         self.path_anno = kwargs.get('path_anno', os.path.join(
             settings.TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv'))
         self.image_list = list(filter(lambda path: path.endswith('.tif'), self.path_image))
-        # TODO: Creat a method to visualize image.json files and saves them as jpeg or png
         self.anno_location = self.image_location = settings.OUTPUT_FOLDER
         self.holdback = kwargs.get('holdback', settings.HOLDBACK)
         self.smalllim = kwargs.get('smallim', settings.SMALLLIM)
@@ -162,8 +160,8 @@ class MiniPatch:
             else:
                 raise ImageNameInvalid()
 
-        with open(os.path.join(self.anno_location, 'labels.pickle'), 'wb') as file_:
-            pickle.dump(labels, file_)
+        with open(os.path.join(self.anno_location, 'labels.pickle'), 'w') as file_:
+            json.dump(labels, file_)
 
     def __process_files(self):
         """ Creates the minipatch json files and the labebls.pickle file  """
@@ -202,8 +200,7 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path=''):
     else:
         figsize = (8, 8)
 
-    # TODO: use settings.output_folder instedas of image location and annotations location
-    with open(file_path) as file_:
+    with open(file_path, 'r') as file_:
         data = json.load(file_)
         plt.figure(figsize=figsize)
         image = plt.imread(data['source'])[

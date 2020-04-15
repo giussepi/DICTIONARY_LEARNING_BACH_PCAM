@@ -21,7 +21,7 @@ TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_
 # patterns into a pickle file to have reproductible results and also to not make the
 # minipatches creattion more complicated
 OUTPUT_FOLDER = 'output'
-LABELS_FILENAME = 'labels.pickle'  # TODO: change it for json
+LABELS_FILENAME = 'labels.json'
 
 HOLDBACK = 0.7
 SMALLLIM = 0.3
