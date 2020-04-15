@@ -17,9 +17,6 @@ TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_
 ###############################################################################
 #                         utils.datasets Configuration                        #
 ###############################################################################
-# TODO: I can create all the minipatches and save the train, validation and test filenames or
-# patterns into a pickle file to have reproductible results and also to not make the
-# minipatches creattion more complicated
 OUTPUT_FOLDER = 'output'
 LABELS_FILENAME = 'labels.json'
 

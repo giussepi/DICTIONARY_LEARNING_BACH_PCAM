@@ -18,6 +18,30 @@ Attempt to improve classification results on
 
        `$ ./install.ssh`
 
+   5. Copy settings.py.template into settings.py and set the general configuration settings properly
+
+	  `$ cp settings.py.template settings.py`
+
+
+## Usage
+
+### Create Minipatches
+```python
+from utils.datasets.bach import plot_n_first_json_images, MiniPatch
+
+MiniPatch(cut_size=608)()
+```
+	Note: See class definition to pass the correct parameters
+
+
+### Plot/save images from json image minipatches
+```python
+from utils.datasets.bach import plot_n_first_json_images
+
+plot_n_first_json_images(20, (9, 9), True, 'my_folder', True)
+```
+	Note: See function definition to pass the correct parameters
+
 
 ## Committing changes made on third-party repositories
 
