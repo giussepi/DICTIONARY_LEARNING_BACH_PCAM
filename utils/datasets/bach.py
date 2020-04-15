@@ -171,3 +171,77 @@ class MiniPatch:
         self.__create_minipatches()
         print("Creating labels...")
         self.__create_labels()
+
+
+def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path=''):
+    """
+    Reads a json image file and based on the provided parameters it can be plotted or
+    saved to disk.
+
+    Args:
+        file_path         (str): relative path to the iamge json file
+        figsize (None or tuple): dimensions of the image to be plotted
+        save_to_disk     (bool): if true the image is saved to disk, otherwise it's plotted
+        folder_path       (str): relative path to the folder where the image will be saved
+
+    Usage:
+        plot_json_img(os.path.join(settings.OUTPUT_FOLDER, 'b001_0_0.json'), (9, 9), False)
+    """
+    assert isinstance(file_path, str)
+    assert os.path.isfile(file_path)
+    assert isinstance(save_to_disk, bool)
+    assert isinstance(folder_path, str)
+
+    if folder_path and not os.path.isdir(folder_path):
+        os.mkdir(folder_path)
+
+    if figsize:
+        assert isinstance(figsize, tuple)
+        assert len(figsize) == 2
+        assert figsize[0] > 0 and figsize[1] > 0
+    else:
+        figsize = (8, 8)
+
+    # TODO: use settings.output_folder instedas of image location and annotations location
+    with open(file_path) as file_:
+        data = json.load(file_)
+        plt.figure(figsize=figsize)
+        image = plt.imread(data['source'])[
+            data['roi']['y']:data['roi']['y']+data['roi']['h'],
+            data['roi']['x']:data['roi']['x']+data['roi']['w'],
+        ]
+        plt.imshow(image)
+
+        if save_to_disk:
+            name, _ = get_name_and_extension(file_path.split('/')[-1])
+            plt.savefig(os.path.join(folder_path, '{}.png'.format(name)))
+        else:
+            plt.show()
+
+
+def plot_n_first_json_images(
+        n_images, figsize=None, save_to_disk=False, folder_path='', clean_folder=False):
+    """
+    Reads the n-fist json images from settings.OUTPUT_FOLDER and based on the provided parameters
+    they can be plotted or saved to disk.
+
+    Args:
+        n_images          (int): number of images to read
+        figsize (None or tuple): dimensions of the image to be plotted
+        save_to_disk     (bool): if true the image is saved to disk, otherwise it's plotted
+        folder_path       (str): relative path to the folder where the image will be saved
+        clean_folder     (bool): if true the folder is deleted and re-created
+
+    Usage:
+        plot_n_first_json_images(20, (9, 9), True, 'my_folder', True)
+    """
+    assert isinstance(n_images, int)
+    assert isinstance(clean_folder, bool)
+
+    if clean_folder and os.path.isdir(folder_path):
+        shutil.rmtree(folder_path)
+
+    print("Plotting images")
+    for image in tqdm(os.listdir(settings.OUTPUT_FOLDER)[:n_images]):
+        plot_json_img(
+            os.path.join(settings.OUTPUT_FOLDER, image), figsize, save_to_disk, folder_path)

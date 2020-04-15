@@ -8,3 +8,4 @@ autopep8
 #
 matplotlib
 tqdm
+numpy
