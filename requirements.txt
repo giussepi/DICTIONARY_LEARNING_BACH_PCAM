@@ -4,3 +4,7 @@ ipython
 pyflakes
 pylint
 autopep8
+
+#
+matplotlib
+tqdm
