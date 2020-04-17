@@ -1,4 +1,4 @@
-# emacs as python IDE
+]# emacs as python IDE
 jedi
 ipython
 pyflakes
@@ -9,3 +9,6 @@ autopep8
 matplotlib
 tqdm
 numpy
+# Pillow
+torch
+torchvision

@@ -12,6 +12,7 @@ import os
 import shutil
 
 import matplotlib.pyplot as plt
+# from PIL import Image
 from tqdm import tqdm
 
 from constants.constants import Label
@@ -171,7 +172,22 @@ class MiniPatch:
         self.__create_labels()
 
 
-def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path=''):
+# def read_json_img():
+#     """  """
+#     img = Image.open()
+#     image = cv2.imread(fimg.filename)
+#     img_raw = img.copy()[:, :, ::-1].transpose((2, 0, 1))
+#     img, info_img = preprocess(img, self.imgsize, jitter=0)  # info = (h, w, nh, nw, dx, dy)
+#     img = np.transpose(img / 255., (2, 0, 1))
+#     img = torch.from_numpy(img).float().unsqueeze(0)
+
+#     if use_cuda():
+#         img = Variable(img.type(torch.cuda.FloatTensor))
+#     else:
+#         img = Variable(img.type(torch.FloatTensor))
+
+
+def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', carousel=False):
     """
     Reads a json image file and based on the provided parameters it can be plotted or
     saved to disk.
@@ -181,6 +197,7 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path=''):
         figsize (None or tuple): dimensions of the image to be plotted
         save_to_disk     (bool): if true the image is saved to disk, otherwise it's plotted
         folder_path       (str): relative path to the folder where the image will be saved
+        carousel         (bool): shows images consecutively only if it has been called through plot_n_first_json_images
 
     Usage:
         plot_json_img(os.path.join(settings.OUTPUT_FOLDER, 'b001_0_0.json'), (9, 9), False)
@@ -189,6 +206,7 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path=''):
     assert os.path.isfile(file_path)
     assert isinstance(save_to_disk, bool)
     assert isinstance(folder_path, str)
+    assert isinstance(carousel, bool)
 
     if folder_path and not os.path.isdir(folder_path):
         os.mkdir(folder_path)
@@ -213,11 +231,15 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path=''):
             name, _ = get_name_and_extension(file_path.split('/')[-1])
             plt.savefig(os.path.join(folder_path, '{}.png'.format(name)))
         else:
-            plt.show()
+            if carousel:
+                plt.pause(1)
+                plt.close()
+            else:
+                plt.show()
 
 
 def plot_n_first_json_images(
-        n_images, figsize=None, save_to_disk=False, folder_path='', clean_folder=False):
+        n_images, figsize=None, save_to_disk=False, folder_path='', clean_folder=False, carousel=False):
     """
     Reads the n-fist json images from settings.OUTPUT_FOLDER and based on the provided parameters
     they can be plotted or saved to disk.
@@ -228,6 +250,7 @@ def plot_n_first_json_images(
         save_to_disk     (bool): if true the image is saved to disk, otherwise it's plotted
         folder_path       (str): relative path to the folder where the image will be saved
         clean_folder     (bool): if true the folder is deleted and re-created
+        carousel         (bool): shows images consecutively
 
     Usage:
         plot_n_first_json_images(20, (9, 9), True, 'my_folder', True)
@@ -241,4 +264,4 @@ def plot_n_first_json_images(
     print("Plotting images")
     for image in tqdm(os.listdir(settings.OUTPUT_FOLDER)[:n_images]):
         plot_json_img(
-            os.path.join(settings.OUTPUT_FOLDER, image), figsize, save_to_disk, folder_path)
+            os.path.join(settings.OUTPUT_FOLDER, image), figsize, save_to_disk, folder_path, carousel)
