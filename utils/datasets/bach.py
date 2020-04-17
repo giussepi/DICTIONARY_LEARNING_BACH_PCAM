@@ -187,6 +187,29 @@ class MiniPatch:
 #         img = Variable(img.type(torch.FloatTensor))
 
 
+def read_roi_image(file_path):
+    """
+    Reads the image from the roi_file and returns the ROI as a numpy array
+
+    Args:
+        file_path         (str): relative path to the iamge json file
+
+    Returns:
+        ROI numpy array
+    """
+    assert isinstance(file_path, str)
+    assert os.path.isfile(file_path)
+
+    with open(file_path, 'r') as file_:
+        data = json.load(file_)
+        image = plt.imread(data['source'])[
+            data['roi']['y']:data['roi']['y']+data['roi']['h'],
+            data['roi']['x']:data['roi']['x']+data['roi']['w'],
+        ]
+
+    return image
+
+
 def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', carousel=False):
     """
     Reads a json image file and based on the provided parameters it can be plotted or
@@ -218,24 +241,19 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', c
     else:
         figsize = (8, 8)
 
-    with open(file_path, 'r') as file_:
-        data = json.load(file_)
-        plt.figure(figsize=figsize)
-        image = plt.imread(data['source'])[
-            data['roi']['y']:data['roi']['y']+data['roi']['h'],
-            data['roi']['x']:data['roi']['x']+data['roi']['w'],
-        ]
-        plt.imshow(image)
+    plt.figure(figsize=figsize)
+    image = read_roi_image(file_path)
+    plt.imshow(image)
 
-        if save_to_disk:
-            name, _ = get_name_and_extension(file_path.split('/')[-1])
-            plt.savefig(os.path.join(folder_path, '{}.png'.format(name)))
+    if save_to_disk:
+        name, _ = get_name_and_extension(file_path.split('/')[-1])
+        plt.savefig(os.path.join(folder_path, '{}.png'.format(name)))
+    else:
+        if carousel:
+            plt.pause(1)
+            plt.close()
         else:
-            if carousel:
-                plt.pause(1)
-                plt.close()
-            else:
-                plt.show()
+            plt.show()
 
 
 def plot_n_first_json_images(
