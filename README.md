@@ -27,18 +27,31 @@ Attempt to improve classification results on
 
 ### Create Minipatches
 ```python
-from utils.datasets.bach import plot_n_first_json_images, MiniPatch
+from utils.datasets.bach import MiniPatch
 
 MiniPatch(cut_size=608)()
 ```
 	Note: See class definition to pass the correct parameters
 
 
+### Create Train/Test split
+```python
+from utils.datasets.bach import TrainTestSplit
+
+TrainTestSplit()()
+```
+	Note: See class definition to pass the correct parameters
+
+
 ### Plot/save images from json image minipatches
 ```python
+import os
+
+import settings
 from utils.datasets.bach import plot_n_first_json_images
 
-plot_n_first_json_images(20, (9, 9), True, 'my_folder', True)
+    plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
+                             (9, 9), carousel=True)
 ```
 	Note: See function definition to pass the correct parameters
 

@@ -1,4 +1,4 @@
-]# emacs as python IDE
+# emacs as python IDE
 jedi
 ipython
 pyflakes
@@ -12,3 +12,4 @@ numpy
 # Pillow
 torch
 torchvision
+scikit-learn

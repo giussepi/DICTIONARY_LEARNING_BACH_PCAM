@@ -11,14 +11,20 @@ import json
 import os
 import shutil
 
+import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 # from PIL import Image
+from sklearn.model_selection import train_test_split
+import torch
+from torch.utils.data import Dataset
 from tqdm import tqdm
 
 from constants.constants import Label
 from core.exceptions.dataset import ImageNameInvalid
 import settings
 from utils.files import get_name_and_extension
+from utils.utils import clean_create_folder
 
 
 class MiniPatch:
@@ -48,17 +54,11 @@ class MiniPatch:
         self.overlap_coefficient = kwargs.get('overlap_coefficient', settings.OVERLAP_COEFFICIENT)
         self.overlap = int(self.overlap_coefficient * self.cut_size)
 
-        self.__clean_create_folders()
+        clean_create_folder(self.anno_location)
 
     def __call__(self):
         """ Functor call """
         return self.__process_files()
-
-    def __clean_create_folders(self):
-        """ Removes the output folder and recreate it for the new outputs """
-        if os.path.isdir(self.anno_location):
-            shutil.rmtree(self.anno_location)
-        os.mkdir(self.anno_location)
 
     def __create_image_json_file(self, filename, source_filename, x, y, xmax, ymax):
         """
@@ -161,7 +161,7 @@ class MiniPatch:
             else:
                 raise ImageNameInvalid()
 
-        with open(os.path.join(self.anno_location, 'labels.pickle'), 'w') as file_:
+        with open(os.path.join(self.anno_location, settings.LABELS_FILENAME), 'w') as file_:
             json.dump(labels, file_)
 
     def __process_files(self):
@@ -170,6 +170,125 @@ class MiniPatch:
         self.__create_minipatches()
         print("Creating labels...")
         self.__create_labels()
+
+
+class TrainTestSplit:
+    """
+    Splits the dataset into train and test subsets
+
+    Args:
+        root_folder (str): path to the folder containing the json images and labels file
+        labels      (str): name of the labels file
+        test_size   (float): test dataset size in range [0, 1]
+
+    Usage:
+        TrainTestSplit(test_size=0.2)()
+    """
+
+    def __init__(self, *args, **kwargs):
+        """ Initializes the object and loads the whole labels json file """
+        self.root_folder = kwargs.get('root_folder', settings.OUTPUT_FOLDER)
+        assert os.path.isdir(self.root_folder)
+        self.labels = os.path.join(
+            self.root_folder, kwargs.get('labels', settings.LABELS_FILENAME))
+        assert os.path.isfile(self.labels)
+        self.test_size = kwargs.get('test_size', settings.TEST_SIZE)
+        assert isinstance(self.test_size, float)
+
+        with open(self.labels, 'r') as file_:
+            self.labels = json.load(file_)
+
+        self.x_train = self.x_test = self.y_train = self.y_test = None
+
+    def __call__(self):
+        """
+        * Functor call
+        * Splits the dataset into train and test subsets
+        """
+        self.__split_train_test_labels()
+        self.__move_train_test_images()
+
+    def __split_train_test_labels(self):
+        """
+        Splits the dataset and saves the train and test label json files at train and test
+        folders respectively
+        """
+        print("Creating labels json files...")
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
+            list(self.labels.keys()), list(self.labels.values()), test_size=self.test_size,
+            random_state=settings.RANDOM_STATE, stratify=list(self.labels.values())
+        )
+
+        folders = [os.path.join(self.root_folder, folder)
+                   for folder in [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]]
+
+        for folder in tqdm(folders):
+            clean_create_folder(folder)
+
+            # saving labels file
+            if folder == settings.TRAIN_FOLDER_NAME:
+                keys, values = self.x_train, self.y_train
+            else:
+                keys, values = self.x_test, self.y_test
+
+            with open(os.path.join(folder, settings.LABELS_FILENAME), 'w') as file_:
+                json.dump(dict(zip(keys, values)), file_)
+
+    def __move_train_test_images(self):
+        """ Moves image json files to their corresponding train/test folders """
+        print("Creating train dataset")
+        for filename in tqdm(self.x_train):
+            shutil.move(
+                os.path.join(self.root_folder, filename),
+                os.path.join(self.root_folder, settings.TRAIN_FOLDER_NAME, filename)
+            )
+
+        print("Creating test dataset")
+        for filename in tqdm(self.x_test):
+            shutil.move(
+                os.path.join(self.root_folder, filename),
+                os.path.join(self.root_folder, settings.TEST_FOLDER_NAME, filename)
+            )
+
+
+class BACHDataset(Dataset):
+    """ BACH Dataset """
+
+    def __init__(
+            self, json_images_folder, labels_filename=settings.LABELS_FILENAME, transform=None):
+        """
+        Note: the labels file must be inside the json_images_folder
+        * Makes sure the json_images_folder and labels_filename exists
+        * Loads the labels
+        * Initialises the instance
+        """
+        assert os.path.isdir(json_images_folder)
+        labels_path = os.path.join(json_images_folder, labels_filename)
+        assert os.path.isfile(labels_path)
+
+        with open(labels_path, 'r') as file_:
+            self.data = pd.DataFrame(list(json.load(file_).items()), columns=["filename", "label"])
+
+        self.root_dir = json_images_folder
+        self.transform = transform
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        img_name = os.path.join(self.root_dir, self.data.iloc[idx, 0])
+        image = read_roi_image(img_name)
+        # TODO: review is casting to float is strictly necessary
+        target = np.array(self.data.iloc[idx, 1]).astype('float')
+        sample = {'image': image, 'target': target}
+
+        if self.transform:
+            sample = self.transform(sample)
+
+        return sample
 
 
 # def read_json_img():
@@ -257,29 +376,32 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', c
 
 
 def plot_n_first_json_images(
-        n_images, figsize=None, save_to_disk=False, folder_path='', clean_folder=False, carousel=False):
+        n_images, read_folder_path, figsize=None, save_to_disk=False, save_folder_path='',
+        clean_folder=False, carousel=False):
     """
-    Reads the n-fist json images from settings.OUTPUT_FOLDER and based on the provided parameters
+    Reads the n-fist json images from read_folder_path and based on the provided parameters
     they can be plotted or saved to disk.
 
     Args:
         n_images          (int): number of images to read
+        read_folder_path  (str): folder containing the json images
         figsize (None or tuple): dimensions of the image to be plotted
         save_to_disk     (bool): if true the image is saved to disk, otherwise it's plotted
-        folder_path       (str): relative path to the folder where the image will be saved
+        save_folder_path (str): relative path to the folder where the image will be saved
         clean_folder     (bool): if true the folder is deleted and re-created
         carousel         (bool): shows images consecutively
 
     Usage:
-        plot_n_first_json_images(20, (9, 9), True, 'my_folder', True)
+        plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
+                                (9, 9), False, 'my_folder', False, True)
     """
     assert isinstance(n_images, int)
     assert isinstance(clean_folder, bool)
 
-    if clean_folder and os.path.isdir(folder_path):
-        shutil.rmtree(folder_path)
+    if clean_folder and os.path.isdir(save_folder_path):
+        shutil.rmtree(save_folder_path)
 
     print("Plotting images")
-    for image in tqdm(os.listdir(settings.OUTPUT_FOLDER)[:n_images]):
+    for image in tqdm(os.listdir(read_folder_path)[:n_images]):
         plot_json_img(
-            os.path.join(settings.OUTPUT_FOLDER, image), figsize, save_to_disk, folder_path, carousel)
+            os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path, carousel)
