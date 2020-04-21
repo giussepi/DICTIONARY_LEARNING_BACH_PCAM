@@ -276,6 +276,46 @@ class TransferLearningResnet18:
         print('Testing complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
 
+    def get_CNN_codes(self, squeeze=False, transpose=False, to_numpy=False):
+        """
+        Get and returns the CNN codes contactenated from the avgpool layer
+
+        Args:
+            squeeze   (bool): Whether to squeeze the tensor or not
+            transpose (bool): Whether to tranpose the tensor or not
+            to_numpy  (bool): Whether to return a numpy array or not
+
+        Returns:
+            torch.Tensor or numpy.array
+        """
+        cnn_codes = []
+
+        def hook(module, input_, output_):
+            cnn_codes.append(output_)
+
+        self.model.avgpool.register_forward_hook(hook)
+        self.model.eval()
+
+        for data in self.dataloaders[self.TEST]:
+            inputs = data['image'].to(self.device)
+            labels = data['target'].to(self.device)
+
+            with torch.no_grad():
+                self.model(inputs)
+
+        cnn_codes_tensor = torch.cat(cnn_codes, dim=0)
+
+        if squeeze:
+            cnn_codes_tensor = cnn_codes_tensor.squeeze()
+
+        if transpose:
+            cnn_codes_tensor = cnn_codes_tensor.T
+
+        if to_numpy:
+            cnn_codes_tensor = cnn_codes_tensor.cpu().numpy()
+
+        return cnn_codes_tensor
+
     def visualize_model(self, num_images=6):
         """
         Plots some images with its predicitons
