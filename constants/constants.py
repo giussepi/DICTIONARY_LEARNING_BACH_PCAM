@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""" constants """
+""" constants.constants """
 
 from collections import namedtuple
 from core.exceptions.dataset import LabelIdInvalid

@@ -226,7 +226,7 @@ class TrainTestSplit:
             clean_create_folder(folder)
 
             # saving labels file
-            if folder == settings.TRAIN_FOLDER_NAME:
+            if folder.endswith(settings.TRAIN_FOLDER_NAME):
                 keys, values = self.x_train, self.y_train
             else:
                 keys, values = self.x_test, self.y_test
@@ -281,29 +281,13 @@ class BACHDataset(Dataset):
 
         img_name = os.path.join(self.root_dir, self.data.iloc[idx, 0])
         image = read_roi_image(img_name)
-        # TODO: review is casting to float is strictly necessary
-        target = np.array(self.data.iloc[idx, 1]).astype('float')
+        target = np.array(self.data.iloc[idx, 1])
         sample = {'image': image, 'target': target}
 
         if self.transform:
-            sample = self.transform(sample)
+            image = self.transform(sample['image'])
 
-        return sample
-
-
-# def read_json_img():
-#     """  """
-#     img = Image.open()
-#     image = cv2.imread(fimg.filename)
-#     img_raw = img.copy()[:, :, ::-1].transpose((2, 0, 1))
-#     img, info_img = preprocess(img, self.imgsize, jitter=0)  # info = (h, w, nh, nw, dx, dy)
-#     img = np.transpose(img / 255., (2, 0, 1))
-#     img = torch.from_numpy(img).float().unsqueeze(0)
-
-#     if use_cuda():
-#         img = Variable(img.type(torch.cuda.FloatTensor))
-#     else:
-#         img = Variable(img.type(torch.FloatTensor))
+        return {'image': image, 'target': target}
 
 
 def read_roi_image(file_path):

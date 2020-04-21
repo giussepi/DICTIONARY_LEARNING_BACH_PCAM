@@ -5,6 +5,12 @@
 dl_algorithms/*
 !dl_algorithms/__init__.py
 
+# model_weights
+weights
+
+# training logs
+training_logs
+
 # Emacs files
 *~
 
