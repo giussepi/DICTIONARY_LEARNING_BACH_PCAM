@@ -55,6 +55,24 @@ from utils.datasets.bach import plot_n_first_json_images
 ```
 	Note: See function definition to pass the correct parameters
 
+### Handle resnet18: fine-tuned / fixed feature extractor
+``` python
+from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
+
+# example 1: Train a resnet18 using fine tuning
+model = TransferLearningResnet18(fine_tune=True)
+model.training_data_plot_grid()
+model.train(num_epochs=25)
+model.save('mymodel.pt')
+model.visualize_model()
+model.test()
+
+# example 2: Load a resnet18 as a fixed feature extractor
+model2 = TransferLearningResnet18(fine_tune=False)
+model2.load('weights/resnet18_feature_extractor.pt')
+model2.visualize_model()
+model2.test()
+```
 
 ## Committing changes made on third-party repositories
 
