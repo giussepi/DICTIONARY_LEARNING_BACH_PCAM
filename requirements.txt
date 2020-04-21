@@ -13,3 +13,12 @@ numpy
 torch
 torchvision
 scikit-learn
+scikit-cuda
+scipy
+ipython
+jupyter
+pandas
+sympy
+nose
+torch
+torchvision
