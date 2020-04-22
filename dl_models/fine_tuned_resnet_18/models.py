@@ -351,7 +351,7 @@ class TransferLearningResnet18:
 
         # Workaround to serialize as JSON the numpy arrays
         formatted_cnn_codes = cnn_codes.squeeze().T.cpu().numpy()
-        # review if it's necessary to use float
+        # TODO: review if it's necessary to use float
         formatted_labels = np.zeros((len(Label.CHOICES), labels.shape[0]), dtype=float)
 
         for index, label_item in enumerate(Label.CHOICES):
