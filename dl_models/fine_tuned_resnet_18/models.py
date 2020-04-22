@@ -4,6 +4,7 @@
 from __future__ import print_function, division
 
 import copy
+import json
 import os
 import time
 import torch
@@ -19,6 +20,7 @@ from constants.constants import Label
 from dl_models.fine_tuned_resnet_18 import constants as local_constants
 import settings
 from utils.datasets.bach import BACHDataset
+from utils.utils import get_random_string, get_filename_and_extension, clean_json_filename
 
 
 class TransferLearningResnet18:
@@ -48,6 +50,8 @@ class TransferLearningResnet18:
     # TODO: modify the code to consider test and validation separately and properly
     TEST = 'test'
 
+    SUB_DATASETS = [TRAIN, TEST]
+
     def __init__(self, *args, **kwargs):
         """
         Initializes the instance attributes
@@ -66,15 +70,15 @@ class TransferLearningResnet18:
         self.image_datasets = {
             x: BACHDataset(
                 os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
-            for x in [self.TRAIN, self.TEST]
+            for x in self.SUB_DATASETS
         }
         self.dataloaders = {
             x: torch.utils.data.DataLoader(
                 self.image_datasets[x], batch_size=settings.BATCH_SIZE,
                 shuffle=True, num_workers=settings.NUM_WORKERS)
-            for x in [self.TRAIN, self.TEST]
+            for x in self.SUB_DATASETS
         }
-        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in [self.TRAIN, self.TEST]}
+        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
 
         self.init_model()
 
@@ -276,19 +280,21 @@ class TransferLearningResnet18:
         print('Testing complete in {:.0f}m {:.0f}s'.format(
             time_elapsed // 60, time_elapsed % 60))
 
-    def get_CNN_codes(self, squeeze=False, transpose=False, to_numpy=False):
+    def get_CNN_codes(self, sub_dataset):
         """
-        Get and returns the CNN codes contactenated from the avgpool layer
+        Get and returns the CNN codes contactenated from the avgpool layer, also returns
+        the labels for each CNN code
 
         Args:
-            squeeze   (bool): Whether to squeeze the tensor or not
-            transpose (bool): Whether to tranpose the tensor or not
-            to_numpy  (bool): Whether to return a numpy array or not
+            sub_dataset (str): any value from self.SUB_DATASETS
 
         Returns:
-            torch.Tensor or numpy.array
+            cnn_codes (torch.Tensor), labels (torch.Tensor)
         """
+        assert sub_dataset in self.SUB_DATASETS
+
         cnn_codes = []
+        all_labels = []
 
         def hook(module, input_, output_):
             cnn_codes.append(output_)
@@ -296,25 +302,126 @@ class TransferLearningResnet18:
         self.model.avgpool.register_forward_hook(hook)
         self.model.eval()
 
-        for data in self.dataloaders[self.TEST]:
+        for data in self.dataloaders[sub_dataset]:
             inputs = data['image'].to(self.device)
-            labels = data['target'].to(self.device)
+            all_labels.append(data['target'])
 
             with torch.no_grad():
                 self.model(inputs)
 
-        cnn_codes_tensor = torch.cat(cnn_codes, dim=0)
+        return torch.cat(cnn_codes, dim=0), torch.cat(all_labels)
 
-        if squeeze:
-            cnn_codes_tensor = cnn_codes_tensor.squeeze()
+    def get_all_CNN_codes(self):
+        """
+        Creates and returns a dictionary containing  all the CNN codes and labels for all
+        the sub-datasets created
 
-        if transpose:
-            cnn_codes_tensor = cnn_codes_tensor.T
+        Returns:
+            {'sub_dataset_1': [cnn codes torch.Tensor, labels torch.Tensor], ...}
+        """
+        return dict(
+            (sub_dataset, self.get_CNN_codes(sub_dataset))
+            for sub_dataset in self.SUB_DATASETS
+        )
 
-        if to_numpy:
-            cnn_codes_tensor = cnn_codes_tensor.cpu().numpy()
+    def format_for_LC_KSVD(self, sub_dataset, cnn_codes, labels, save=False, filename=''):
+        """
+        Returns a dictionary with cnn_codes and labels for the sub_dataset chosen. Optionally,
+        it saves the dictionary in the file <filename>_<sub_dataset>.json at
+        settings.CNN_CODES_FOLDER
 
-        return cnn_codes_tensor
+        Args:
+            sub_dataset        (str): Any value from self.SUB_DATASETS
+            cnn_codes (torch.Tensor): Tensor with all cnn codes.
+            labels    (torch.Tensor): Tensor with all labels.
+
+            save              (bool): Whether or not save the result
+            filename           (str): Filename with .json extension
+
+        Returns:
+            {'<sub_dataset>': [cnn codes list of lists, labels list]}
+
+        """
+        assert sub_dataset in self.SUB_DATASETS
+        assert isinstance(cnn_codes, torch.Tensor)
+        assert isinstance(labels, torch.Tensor)
+        assert isinstance(save, bool)
+
+        cleaned_filename = clean_json_filename(filename)
+
+        # Workaround to serialize as JSON the numpy arrays
+        formatted_cnn_codes = cnn_codes.squeeze().T.cpu().numpy()
+        # review if it's necessary to use float
+        formatted_labels = np.zeros((len(Label.CHOICES), labels.shape[0]), dtype=float)
+
+        for index, label_item in enumerate(Label.CHOICES):
+            formatted_labels[index, labels == label_item.id] = 1
+
+        # Workaround to serialize numpy arrays as JSON
+        formatted_data = {
+            'cnn_codes': formatted_cnn_codes.tolist(),
+            'labels': formatted_labels.tolist()
+        }
+
+        if save:
+            if not os.path.isdir(settings.CNN_CODES_FOLDER):
+                os.makedirs(settings.CNN_CODES_FOLDER)
+
+            with open(os.path.join(settings.CNN_CODES_FOLDER, filename), 'w') as file_:
+                json.dump(formatted_data, file_)
+
+        return formatted_data
+
+    def format_all_for_LC_KSVD(self, cnn_codes_labels, save=False, filename=''):
+        """
+        Returns a dictionary containing all the cnn_codes and labels for each sub-dataset
+        created properly formatted to be used by the LC-KSVD algorithm. Optionally, it
+        saves the dictionary splitted in several files with the
+        format <filename>_<sub_dataset>.json at settings.CNN_CODES_FOLDER
+
+        Args:
+            cnn_codes_labels (dict): Dictionary returned by the get_all_CNN_codes method
+            save             (bool): Whether or not save the result
+            filename          (str): filename with .json extension
+
+        Returns:
+            {'sub_dataset_1': [cnn codes list of lists, labels list], ...}
+        """
+        assert isinstance(cnn_codes_labels, dict)
+        assert isinstance(save, bool)
+
+        cleaned_filename = clean_json_filename(filename)
+        name, extension = get_filename_and_extension(cleaned_filename)
+
+        formatted_data = dict()
+
+        for sub_dataset in self.SUB_DATASETS:
+            new_name = '{}_{}.{}'.format(name, sub_dataset, extension)
+            formatted_data[sub_dataset] = self.format_for_LC_KSVD(
+                sub_dataset, *cnn_codes_labels[sub_dataset], save, new_name)
+
+        return formatted_data
+
+    def create_datasets_for_LC_KSVD(self, filename):
+        """
+        * Gets all CNN codes and labels
+        * Transform the data to be compatible with the LC-KSVD algorithm
+        * Saves dataset at settings.CNN_CODES_FOLDER using several files named
+          <filename>_<sub_dataset>.json
+
+        Note: The models must be trained. So call the 'train' method or load
+              the weights.
+
+        Args:
+            filename (str): filename with .json extension
+
+        Usage:
+            model = TransferLearningResnet18(fine_tune=True)
+            model.load('weights/resnet18_fine_tuned.pt')
+            model.create_datasets_for_LC_KSVD('my_dataset.json')
+        """
+        all_cnn_codes = self.get_all_CNN_codes()
+        self.format_all_for_LC_KSVD(all_cnn_codes, save=True, filename=filename)
 
     def visualize_model(self, num_images=6):
         """

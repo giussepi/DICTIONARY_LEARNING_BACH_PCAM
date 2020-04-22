@@ -74,6 +74,16 @@ model2.visualize_model()
 model2.test()
 ```
 
+### Create datasets for LC_KSVD
+```python
+from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
+
+model = TransferLearningResnet18(fine_tune=True)
+model.load('weights/resnet18_fine_tuned.pt')
+model.create_datasets_for_LC_KSVD('my_dataset.json')
+```
+	Note: See function definition to pass the correct parameters
+
 ### load_cnn_codes
 ```python
 from utils.utils import load_cnn_codes

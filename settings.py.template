@@ -17,8 +17,13 @@ TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_
 ###############################################################################
 #                         utils.datasets Configuration                        #
 ###############################################################################
+# TODO: I can create all the minipatches and save the train, validation and test filenames or
+# patterns into a pickle file to have reproductible results and also to not make the
+# minipatches creattion more complicated
 OUTPUT_FOLDER = 'output'
 LABELS_FILENAME = 'labels.json'
+TRAIN_FOLDER_NAME = 'train'
+TEST_FOLDER_NAME = 'test'
 
 HOLDBACK = 0.7
 SMALLLIM = 0.3
@@ -26,3 +31,18 @@ CUT_SIZE = 512
 OVERLAP_COEFFICIENT = 0.5
 # overlap must be an integer to avoid errors with the sliding window algorithm
 OVERLAP = int(OVERLAP_COEFFICIENT * CUT_SIZE)
+
+TEST_SIZE = 0.15
+
+RANDOM_STATE = 42
+
+BATCH_SIZE = 32  # 4
+NUM_WORKERS = 12  # 4
+
+
+###############################################################################
+#                        dl_models.fine_tuned_resnet_18                       #
+###############################################################################
+
+MODEL_SAVE_FOLDER = 'weights'
+CNN_CODES_FOLDER = 'cnn_codes'
