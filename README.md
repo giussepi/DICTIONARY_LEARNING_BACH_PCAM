@@ -80,7 +80,7 @@ from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
 model = TransferLearningResnet18(fine_tune=True)
 model.load('weights/resnet18_fine_tuned.pt')
-model.create_datasets_for_LC_KSVD('my_dataset.json')
+model.create_datasets_for_LC_KSVD('mydataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
@@ -88,7 +88,7 @@ model.create_datasets_for_LC_KSVD('my_dataset.json')
 ```python
 from utils.utils import load_cnn_codes
 
-test = load_cnn_codes('attempt2_test.json')
+test = load_cnn_codes('mydataset_test.json')
 test['cnn_codes'].shape  # (512, 2100)
 test['labels'].shape  # (4, 2100)
 ```
