@@ -74,6 +74,16 @@ model2.visualize_model()
 model2.test()
 ```
 
+### load_cnn_codes
+```python
+from utils.utils import load_cnn_codes
+
+test = load_cnn_codes('attempt2_test.json')
+test['cnn_codes'].shape  # (512, 2100)
+test['labels'].shape  # (4, 2100)
+```
+	Note: See function definition to pass the correct parameters
+
 ## Committing changes made on third-party repositories
 
    All changes made on any third-party repository from `dl_algorithms` directory must committed and pushed to each repository manually. Because, this application is not keeping track of any of them.
