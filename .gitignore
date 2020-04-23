@@ -20,6 +20,9 @@ output
 # configuration files
 settings.py
 
+# dataset symlink
+datasets
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
