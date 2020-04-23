@@ -16,6 +16,7 @@ training_logs
 
 # Generated files
 output
+cnn_codes
 
 # configuration files
 settings.py
