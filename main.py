@@ -6,6 +6,7 @@ from sklearn.metrics import accuracy_score
 
 # from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from dl_algorithms.lc_ksvd.dksvd import DKSVD
+# import settings
 # from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit
 from utils.utils import load_cnn_codes
 
@@ -18,8 +19,8 @@ def main():
     #                          (9, 9), False, 'my_folder', False, True)
     # plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
     #                          (9, 9), True, 'my_folder', True, True)
-    # MiniPatch()()
     # TrainTestSplit()()
+    # MiniPatch()()
 
     # faces projected to 504 dimensional vector, original crops 192x168 (32256)
 
@@ -38,22 +39,21 @@ if __name__ == '__main__':
     main()
     # model = TransferLearningResnet18(fine_tune=True)
     # model.training_data_plot_grid()
+    # model.train(num_epochs=25)
+    # model.save('restnet18_feature_extractor_2.pt')
     # model.load('weights/resnet18_feature_extractor.pt')
-    # model.load('weights/resnet18_fine_tuned.pt')
+    # model.load('weights/resnet18_fine_tuned_2.pt')
     # model.test()
     # model.visualize_model()
 
-    # model.create_datasets_for_LC_KSVD('attempt2.json')
+    # model.create_datasets_for_LC_KSVD('attempt3.json')
+    test = load_cnn_codes('attempt3_test.json')
+    # test['cnn_codes'].shape  # (512, 2100)
+    # test['labels'].shape  # (4, 2100)
 
-    # need to save this and format everything properly to used it LC-KSVD
-
-    test = load_cnn_codes('attempt2_test.json')
-    test['cnn_codes'].shape  # (512, 2100)
-    test['labels'].shape  # (4, 2100)
-
-    train = load_cnn_codes('attempt2_train.json')
-    train['cnn_codes'].shape  # (512, 11900)
-    train['labels'].shape  # (4, 11900)
+    train = load_cnn_codes('attempt3_train.json')
+    # train['cnn_codes'].shape  # (512, 11900)
+    # train['labels'].shape  # (4, 11900)
 
     ###########################################################################
     #                                 LC-KSVD1                                #

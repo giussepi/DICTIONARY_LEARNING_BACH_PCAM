@@ -7,20 +7,22 @@ import copy
 import json
 import os
 import time
+
+import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
-import numpy as np
 import torchvision
 from torchvision import models, transforms
-import matplotlib.pyplot as plt
+from tqdm import tqdm
 
 from constants.constants import Label
 from dl_models.fine_tuned_resnet_18 import constants as local_constants
 import settings
 from utils.datasets.bach import BACHDataset
-from utils.utils import get_random_string, get_filename_and_extension, clean_json_filename
+from utils.utils import get_filename_and_extension, clean_json_filename
 
 
 class TransferLearningResnet18:
@@ -301,8 +303,10 @@ class TransferLearningResnet18:
 
         self.model.avgpool.register_forward_hook(hook)
         self.model.eval()
+        print("Processing mini-patch batches to get CNN codes from {} sub-dataset"
+              .format(sub_dataset))
 
-        for data in self.dataloaders[sub_dataset]:
+        for data in tqdm(self.dataloaders[sub_dataset]):
             inputs = data['image'].to(self.device)
             all_labels.append(data['target'])
 
@@ -367,7 +371,7 @@ class TransferLearningResnet18:
             if not os.path.isdir(settings.CNN_CODES_FOLDER):
                 os.makedirs(settings.CNN_CODES_FOLDER)
 
-            with open(os.path.join(settings.CNN_CODES_FOLDER, filename), 'w') as file_:
+            with open(os.path.join(settings.CNN_CODES_FOLDER, cleaned_filename), 'w') as file_:
                 json.dump(formatted_data, file_)
 
         return formatted_data
@@ -395,7 +399,8 @@ class TransferLearningResnet18:
 
         formatted_data = dict()
 
-        for sub_dataset in self.SUB_DATASETS:
+        print("Formatting and saving sub-datasets CNN codes for LC-KSVD")
+        for sub_dataset in tqdm(self.SUB_DATASETS):
             new_name = '{}_{}.{}'.format(name, sub_dataset, extension)
             formatted_data[sub_dataset] = self.format_for_LC_KSVD(
                 sub_dataset, *cnn_codes_labels[sub_dataset], save, new_name)
