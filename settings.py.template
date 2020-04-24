@@ -11,19 +11,20 @@ BASE_DATASET_LINK = os.path.join('datasets', 'ICIAR 2018 BACH challenge')
 
 TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos')
 
+TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv')
+
 TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_TestDataset', 'Photos')
 
 
 ###############################################################################
 #                         utils.datasets Configuration                        #
 ###############################################################################
-# TODO: I can create all the minipatches and save the train, validation and test filenames or
-# patterns into a pickle file to have reproductible results and also to not make the
-# minipatches creattion more complicated
 OUTPUT_FOLDER = 'output'
-LABELS_FILENAME = 'labels.json'
-TRAIN_FOLDER_NAME = 'train'
-TEST_FOLDER_NAME = 'test'
+LABELS_FILENAME = 'labels.json'  # general name for labels file
+TRAIN_SPLIT_FILENAME = 'train.csv'  # original TIFF images
+TEST_SPLIT_FILENAME = 'test.csv'  # original TIFF images
+TRAIN_FOLDER_NAME = 'train'  # for minipatches
+TEST_FOLDER_NAME = 'test'  # for minipatches
 
 HOLDBACK = 0.7
 SMALLLIM = 0.3
