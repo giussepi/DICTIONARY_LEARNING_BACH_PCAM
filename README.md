@@ -25,15 +25,6 @@ Attempt to improve classification results on
 
 ## Usage
 
-### Create Minipatches
-```python
-from utils.datasets.bach import MiniPatch
-
-MiniPatch(cut_size=608)()
-```
-	Note: See class definition to pass the correct parameters
-
-
 ### Create Train/Test split
 ```python
 from utils.datasets.bach import TrainTestSplit
@@ -42,6 +33,13 @@ TrainTestSplit()()
 ```
 	Note: See class definition to pass the correct parameters
 
+### Create Minipatches
+```python
+from utils.datasets.bach import MiniPatch
+
+MiniPatch()()
+```
+	Note: See class definition to pass the correct parameters
 
 ### Plot/save images from json image minipatches
 ```python
@@ -91,6 +89,73 @@ from utils.utils import load_cnn_codes
 test = load_cnn_codes('mydataset_test.json')
 test['cnn_codes'].shape  # (512, 2100)
 test['labels'].shape  # (4, 2100)
+
+train = load_cnn_codes('attempt2_train.json')
+train['cnn_codes'].shape  # (512, 11900)
+train['labels'].shape  # (4, 11900)
+```
+	Note: See function definition to pass the correct parameters
+
+### Run LC-KSVD1
+```python
+import numpy as np
+from sklearn.metrics import accuracy_score
+
+from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from utils.utils import load_cnn_codes
+
+
+train = load_cnn_codes('attempt2_train.json')
+test = load_cnn_codes('attempt3_test.json')
+
+lcksvd = DKSVD(dictsize=570, timeit=True)
+Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+D, X, T, W = lcksvd.labelconsistentksvd1(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T)
+predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+print('\nFinal recognition rate for LC-KSVD1 is : {0:.4f}'.format(
+    accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
+
+```
+	Note: See function definition to pass the correct parameters
+
+### Run LC-KSVD2
+```python
+import numpy as np
+from sklearn.metrics import accuracy_score
+
+from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from utils.utils import load_cnn_codes
+
+
+train = load_cnn_codes('attempt2_train.json')
+test = load_cnn_codes('attempt3_test.json')
+
+lcksvd = DKSVD(dictsize=570, timeit=True)
+ Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+
+D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
+    accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
+```
+	Note: See function definition to pass the correct parameters
+
+### Run D-KSVD
+```python
+import numpy as np
+from sklearn.metrics import accuracy_score
+
+from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from utils.utils import load_cnn_codes
+
+train = load_cnn_codes('attempt2_train.json')
+test = load_cnn_codes('attempt3_test.json')
+
+lcksvd = DKSVD(dictsize=570, timeit=True)
+Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
+predictions, gamma = lcksvd.classification(Dinit, Winit, train['cnn_codes'])
+print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
+    accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
 ```
 	Note: See function definition to pass the correct parameters
 
