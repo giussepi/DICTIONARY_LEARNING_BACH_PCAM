@@ -49,7 +49,7 @@ import settings
 from utils.datasets.bach import plot_n_first_json_images
 
     plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
-                             (9, 9), carousel=True)
+                             (9, 9), carousel=True, remove_axes=False, dpi=100)
 ```
 	Note: See function definition to pass the correct parameters
 

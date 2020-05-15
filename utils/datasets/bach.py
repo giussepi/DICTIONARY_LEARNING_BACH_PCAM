@@ -337,7 +337,10 @@ def read_roi_image(file_path):
     return image
 
 
-def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', carousel=False):
+def plot_json_img(
+        file_path, figsize=None, save_to_disk=False, folder_path='', carousel=False,
+        remove_axes=False, dpi=100
+):
     """
     Reads a json image file and based on the provided parameters it can be plotted or
     saved to disk.
@@ -348,6 +351,8 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', c
         save_to_disk     (bool): if true the image is saved to disk, otherwise it's plotted
         folder_path       (str): relative path to the folder where the image will be saved
         carousel         (bool): shows images consecutively only if it has been called through plot_n_first_json_images
+        remove_axes      (bool): removes the axes and plots only the image without white borders
+        dpi               (int): image resolution
 
     Usage:
         plot_json_img(os.path.join(settings.OUTPUT_FOLDER, 'b001_0_0.json'), (9, 9), False)
@@ -357,8 +362,11 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', c
     assert isinstance(save_to_disk, bool)
     assert isinstance(folder_path, str)
     assert isinstance(carousel, bool)
+    assert isinstance(remove_axes, bool)
+    assert isinstance(dpi, int)
+    assert dpi > 0
 
-    if folder_path and not os.path.isdir(folder_path):
+    if folder_path and not os.path.isdir(folder_path) and save_to_disk:
         os.mkdir(folder_path)
 
     if figsize:
@@ -368,9 +376,17 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', c
     else:
         figsize = (8, 8)
 
-    plt.figure(figsize=figsize)
-    image = read_roi_image(file_path)
-    plt.imshow(image)
+    if remove_axes:
+        image = read_roi_image(file_path)
+        fig = plt.figure(figsize=figsize, dpi=dpi)
+        ax = plt.Axes(fig, [0., 0., 1., 1.])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+        ax.imshow(image)
+    else:
+        plt.figure(figsize=figsize, dpi=dpi)
+        image = read_roi_image(file_path)
+        plt.imshow(image)
 
     if save_to_disk:
         name, _ = get_name_and_extension(file_path.split('/')[-1])
@@ -385,7 +401,7 @@ def plot_json_img(file_path, figsize=None, save_to_disk=False, folder_path='', c
 
 def plot_n_first_json_images(
         n_images, read_folder_path, figsize=None, save_to_disk=False, save_folder_path='',
-        clean_folder=False, carousel=False):
+        clean_folder=False, carousel=False, remove_axes=False, dpi=100):
     """
     Reads the n-fist json images from read_folder_path and based on the provided parameters
     they can be plotted or saved to disk.
@@ -398,6 +414,8 @@ def plot_n_first_json_images(
         save_folder_path (str): relative path to the folder where the image will be saved
         clean_folder     (bool): if true the folder is deleted and re-created
         carousel         (bool): shows images consecutively
+        remove_axes      (bool): removes the axes and plots only the image without white borders
+        dpi               (int): image resolution
 
     Usage:
         plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
@@ -406,10 +424,10 @@ def plot_n_first_json_images(
     assert isinstance(n_images, int)
     assert isinstance(clean_folder, bool)
 
-    if clean_folder and os.path.isdir(save_folder_path):
+    if clean_folder and os.path.isdir(save_folder_path) and save_to_disk:
         shutil.rmtree(save_folder_path)
 
     print("Plotting images")
     for image in tqdm(os.listdir(read_folder_path)[:n_images]):
         plot_json_img(
-            os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path, carousel)
+            os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path, carousel, remove_axes, dpi)
