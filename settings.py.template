@@ -37,13 +37,13 @@ TEST_SIZE = 0.15
 
 RANDOM_STATE = 42
 
-BATCH_SIZE = 32  # 4
-NUM_WORKERS = 12  # 4
-
 
 ###############################################################################
 #                        dl_models.fine_tuned_resnet_18                       #
 ###############################################################################
+
+BATCH_SIZE = 32  # 4
+NUM_WORKERS = 12  # 4
 
 MODEL_SAVE_FOLDER = 'weights'
 CNN_CODES_FOLDER = 'cnn_codes'
