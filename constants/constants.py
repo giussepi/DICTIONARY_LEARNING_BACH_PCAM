@@ -4,6 +4,10 @@
 from collections import namedtuple
 from core.exceptions.dataset import LabelIdInvalid
 
+# Colour to plot signals from each label
+# See https://matplotlib.org/3.2.1/tutorials/colors/colors.html
+COLOURS = tuple(['r', 'g', 'b', 'orange'])
+
 
 LabelItem = namedtuple('LabelItem', ['id', 'name'])
 

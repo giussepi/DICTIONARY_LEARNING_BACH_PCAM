@@ -105,7 +105,7 @@ from dl_algorithms.lc_ksvd.dksvd import DKSVD
 from utils.utils import load_cnn_codes
 
 
-train = load_cnn_codes('attempt2_train.json')
+train = load_cnn_codes('attempt3_train.json')
 test = load_cnn_codes('attempt3_test.json')
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
@@ -127,7 +127,7 @@ from dl_algorithms.lc_ksvd.dksvd import DKSVD
 from utils.utils import load_cnn_codes
 
 
-train = load_cnn_codes('attempt2_train.json')
+train = load_cnn_codes('attempt3_train.json')
 test = load_cnn_codes('attempt3_test.json')
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
@@ -148,7 +148,7 @@ from sklearn.metrics import accuracy_score
 from dl_algorithms.lc_ksvd.dksvd import DKSVD
 from utils.utils import load_cnn_codes
 
-train = load_cnn_codes('attempt2_train.json')
+train = load_cnn_codes('attempt3_train.json')
 test = load_cnn_codes('attempt3_test.json')
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
@@ -158,6 +158,35 @@ print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
     accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
 ```
 	Note: See function definition to pass the correct parameters
+
+### Visualize learned representations
+``` python
+import numpy as np
+
+from constants.constants import Label, COLOURS
+from dl_algorithms.lc_ksvd.constants import PlotFilter
+from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from dl_algorithms.lc_ksvd.utils.plot_tools import LearnedRepresentationPlotter
+from utils.utils import load_cnn_codes
+
+
+train = load_cnn_codes('attempt3_train.json')
+test = load_cnn_codes('attempt3_test.json')
+
+lcksvd = DKSVD(dictsize=570, timeit=True)
+ Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+
+D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+
+LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=Label.INDEX, custom_colours=COLOURS)(simple='')
+
+LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=Label.INDEX, custom_colours=COLOURS)(file_saving_name='myimage')
+
+LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=Label.INDEX, custom_colours=COLOURS)( filter_by=PlotFilter.UNIQUE, marker='.')
+
+```
+	Note: See class definition to pass the correct parameters
 
 ## Committing changes made on third-party repositories
 
