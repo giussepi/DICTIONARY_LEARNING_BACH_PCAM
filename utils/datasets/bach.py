@@ -229,7 +229,7 @@ class TrainTestSplit:
     def __init__(self, *args, **kwargs):
         """ Initializes the instance """
         self.test_size = kwargs.get('test_size', settings.TEST_SIZE)
-        assert isinstance(self.test_size, float)
+        assert isinstance(self.test_size, (float, int))
         self.train_xy = self.test_xy = None
 
     def __call__(self):
