@@ -2,12 +2,13 @@
 """  """
 
 import numpy as np
+import os
 from sklearn.metrics import accuracy_score
 
-# from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
+from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from dl_algorithms.lc_ksvd.dksvd import DKSVD
-# import settings
-# from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit
+import settings
+from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit
 from utils.utils import load_cnn_codes
 
 
@@ -15,12 +16,19 @@ def main():
     """  """
     # TODO: the first we need to perform the train/test split and then create the minipatches
 
-    # plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
-    #                          (9, 9), False, 'my_folder', False, True)
+    plot_n_first_json_images(15, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
+                             (9, 9), False, 'my_folder', False, True, remove_axes=False, dpi=100)
     # plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
     #                          (9, 9), True, 'my_folder', True, True)
-    # TrainTestSplit()()
-    # MiniPatch()()
+    TrainTestSplit()()
+    MiniPatch()()
+
+    ###########################################################################
+    #                                 fsadfsdf                                #
+    ###########################################################################
+    # OUTPUT_FOLDER LABELS_FILENAME
+    # output/{train/test}/labels.json  {'filename': label}
+    ###########################################################################
 
     # faces projected to 504 dimensional vector, original crops 192x168 (32256)
 

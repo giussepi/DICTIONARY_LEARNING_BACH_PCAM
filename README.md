@@ -41,7 +41,7 @@ MiniPatch()()
 ```
 	Note: See class definition to pass the correct parameters
 
-### Plot/save images from json image minipatches
+### Plot/Save images from json image minipatches
 ```python
 import os
 
@@ -72,7 +72,24 @@ model2.visualize_model()
 model2.test()
 ```
 
-### Create datasets for LC_KSVD
+### Feature extraction / Dimensionality reduction
+
+#### Raw images
+This method created too many mini patches. Thus, we did not tried to use this
+approach because the matrices will require war more memory than we have and also
+the number of variables will be too much to handle.
+
+- [ ] TODO: Think a feasible approach to try it. Maybe using just a few images
+      per label.
+- [ ] TODO: write load_raw_images
+``` python
+from utils.datasets.bach import RawImages
+
+ri = RawImages()
+ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+```
+#### CNN codes
+##### Create datasets for LC_KSVD
 ```python
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
@@ -82,7 +99,7 @@ model.create_datasets_for_LC_KSVD('mydataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
-### load_cnn_codes
+##### load_cnn_codes
 ```python
 from utils.utils import load_cnn_codes
 

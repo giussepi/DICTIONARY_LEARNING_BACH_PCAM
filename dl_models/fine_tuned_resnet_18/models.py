@@ -15,17 +15,18 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.optim import lr_scheduler
 import torchvision
-from torchvision import models, transforms
+from torchvision import models
 from tqdm import tqdm
 
 from constants.constants import Label
 from dl_models.fine_tuned_resnet_18 import constants as local_constants
+from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
 from utils.datasets.bach import BACHDataset
 from utils.utils import get_filename_and_extension, clean_json_filename
 
 
-class TransferLearningResnet18:
+class TransferLearningResnet18(TransformsMixins):
     """"
     Manages the resnet18 by applying transfer learning and optionally fine tuning
 
@@ -83,27 +84,6 @@ class TransferLearningResnet18:
         self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
 
         self.init_model()
-
-    @staticmethod
-    def get_default_data_transforms():
-        """
-        Returns the default data transformations to be appliend to the train and test datasets
-        """
-        # TODO: Try with the commented transforms
-        return {
-            'train': transforms.Compose([
-                # transforms.RandomResizedCrop(224),
-                # transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                transforms.Normalize(local_constants.MEAN, local_constants.STD)
-            ]),
-            'test': transforms.Compose([
-                # transforms.Resize(256),
-                # transforms.CenterCrop(224),
-                transforms.ToTensor(),
-                transforms.Normalize(local_constants.MEAN, local_constants.STD)
-            ]),
-        }
 
     def init_model(self):
         """ Initializes the model for fine tuning or as a fixed feature extractor """
@@ -284,7 +264,7 @@ class TransferLearningResnet18:
 
     def get_CNN_codes(self, sub_dataset):
         """
-        Get and returns the CNN codes contactenated from the avgpool layer, also returns
+        Get and returns the CNN codes concatenated from the avgpool layer, also returns
         the labels for each CNN code
 
         Args:
