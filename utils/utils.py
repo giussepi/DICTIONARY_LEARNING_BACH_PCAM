@@ -24,7 +24,7 @@ def clean_create_folder(folder_path):
     if os.path.isdir(folder_path):
         shutil.rmtree(folder_path)
 
-    os.mkdir(folder_path)
+    os.makedirs(folder_path)
 
 
 def get_random_string(length=15):

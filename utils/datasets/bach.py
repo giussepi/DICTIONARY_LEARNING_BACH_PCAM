@@ -21,9 +21,10 @@ from tqdm import tqdm
 
 from constants.constants import Label
 from core.exceptions.dataset import ImageNameInvalid
+from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
 from utils.files import get_name_and_extension
-from utils.utils import clean_create_folder
+from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension
 
 
 class MiniPatch:
@@ -312,6 +313,72 @@ class BACHDataset(Dataset):
             image = self.transform(sample['image'])
 
         return {'image': image, 'target': target}
+
+
+class RawImages(TransformsMixins):
+    """  """
+    TRAIN = 'train'
+    TEST = 'test'
+
+    SUB_DATASETS = [TRAIN, TEST]
+
+    def __init__(self, *args, **kwargs):
+        """ Initializes the instance """
+        self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
+        self.image_datasets = {
+            x: BACHDataset(
+                os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
+            for x in self.SUB_DATASETS
+        }
+        self.dataloaders = {
+            x: torch.utils.data.DataLoader(
+                self.image_datasets[x], batch_size=settings.BATCH_SIZE,
+                shuffle=True, num_workers=settings.NUM_WORKERS)
+            for x in self.SUB_DATASETS
+        }
+        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
+
+    def create_datasets_for_LC_KSVD(self, filename):
+        """
+        Args:
+            filename (str): filename with .json extension
+
+        Usage:
+            model.create_datasets_for_LC_KSVD('my_dataset.json')
+        """
+        # hereee
+        clean_create_folder(settings.RAW_CODES_FOLDER)
+        cleaned_filename = clean_json_filename(filename)
+        name, extension = get_filename_and_extension(cleaned_filename)
+
+        for dataset in self.SUB_DATASETS:
+            new_name = '{}_{}.{}'.format(name, dataset, extension)
+            dataset_folder = os.path.join(settings.RAW_CODES_FOLDER, dataset)
+            clean_create_folder(dataset_folder)
+            formatted_data = {'raw_codes': [], 'labels': []}
+            counter = 0
+
+            for data in self.dataloaders[dataset]:
+                inputs = data['image']
+                inputs = inputs.view(*inputs.size()[:2], -1).numpy()
+                # inputs.shape [32, 3, 1024]
+                labels = data['target'].numpy()
+
+                for input_, label in zip(inputs, labels):
+                    json_filename = '{}.json'.format(counter)
+                    formatted_data['raw_codes'].append(json_filename)
+                    formatted_data['labels'].append(label)
+
+                    with open(os.path.join(dataset_folder, json_filename), 'w') as file_:
+                        json.dump(np.mean(input_, axis=0).tolist(), file_)
+                        # np.mean(input_, axis=0).shape (1024)
+
+                    counter += 1
+
+            with open(os.path.join(settings.RAW_CODES_FOLDER, new_name), 'w') as file_:
+                json.dump(formatted_data, file_)
+
+        return formatted_data
 
 
 def read_roi_image(file_path):
