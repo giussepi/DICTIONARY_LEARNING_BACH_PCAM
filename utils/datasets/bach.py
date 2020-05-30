@@ -24,6 +24,7 @@ from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
 from utils.files import get_name_and_extension
+from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
 from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension
 
 
@@ -315,16 +316,25 @@ class BACHDataset(Dataset):
         return {'image': image, 'target': target}
 
 
-class RawImages(TransformsMixins):
-    """  """
+class BaseDatasetCreator(TransformsMixins):
+    """ Holds basic handles to create a dataset """
     TRAIN = 'train'
     TEST = 'test'
 
     SUB_DATASETS = [TRAIN, TEST]
 
     def __init__(self, *args, **kwargs):
-        """ Initializes the instance """
+        """
+        Initializes the instance
+        Kwargs:
+            data_transforms (dict): data transformations to be applied. See TransformsMixins definition
+            codes_folder     (str): folder to store the generated codes
+        """
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
+        self.codes_folder = kwargs.get('codes_folder', '')
+        assert isinstance(self.data_transforms, dict)
+        assert isinstance(self.codes_folder, str)
+        assert self.codes_folder != ''
         self.image_datasets = {
             x: BACHDataset(
                 os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
@@ -338,6 +348,64 @@ class RawImages(TransformsMixins):
         }
         self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
 
+    def process_data(self, dataset, formatted_data):
+        """
+        * Processes the data properly and places it in formatted_data.
+        * Must be overridden
+
+        Args:
+            dataset         (str): sub-dataset name
+            formatted_data (dict): dictionary to store all codes and labels
+
+        NOTE:
+            formatted_data['code'] must be a numpy array with shape [num_images, code_length]
+            formatted_data['code'] must be a numpy array with shape [num_images, ]
+        """
+        # Example:
+        # assert dataset in self.SUB_DATASETS
+        # assert isinstance(formatted_data, dict)
+
+        # counter = 0
+        #
+        # for data in tqdm(self.dataloaders[dataset]):
+        #     inputs = data['image'].numpy()
+        #     labels = data['target'].numpy()
+
+        #     for input_, label in zip(inputs, labels):
+        #         # Do something cool
+        #         processed_input = ...
+        #         formatted_data['codes'].append(processed_input)
+        #         formatted_data['labels'].append(label_)
+        #         counter += 1
+
+        #     # Don't forget to provide numpy arrays
+        #     formatted_data['codes'] = np.array(formatted_data['codes'])
+        #     formatted_data['labels'] = np.array(formatted_data['labels'])
+
+        raise NotImplementedError
+
+    def format_for_LC_KSVD(self, formatted_data):
+        """
+        Formats data from the provided dictionary to be compatible with LC-KSVD algorithm
+
+        Args:
+            formatted_data (dict): dictionary with codes and labels
+        """
+        assert isinstance(formatted_data, dict)
+        assert isinstance(formatted_data['codes'], np.ndarray)
+        assert isinstance(formatted_data['labels'], np.ndarray)
+
+        formatted_data['codes'] = formatted_data['codes'].T
+        formatted_labels = np.zeros(
+            (len(Label.CHOICES), formatted_data['labels'].shape[0]), dtype=float)
+
+        for index, label_item in enumerate(Label.CHOICES):
+            formatted_labels[index, formatted_data['labels'] == label_item.id] = 1
+
+        # Workaround to serialize numpy arrays as JSON
+        formatted_data['codes'] = formatted_data['codes'].tolist()
+        formatted_data['labels'] = formatted_labels.tolist()
+
     def create_datasets_for_LC_KSVD(self, filename):
         """
         Args:
@@ -346,39 +414,127 @@ class RawImages(TransformsMixins):
         Usage:
             model.create_datasets_for_LC_KSVD('my_dataset.json')
         """
-        # hereee
-        clean_create_folder(settings.RAW_CODES_FOLDER)
+        clean_create_folder(self.codes_folder)
         cleaned_filename = clean_json_filename(filename)
         name, extension = get_filename_and_extension(cleaned_filename)
 
+        print("Formatting and saving sub-datasets codes for LC-KSVD")
         for dataset in self.SUB_DATASETS:
+            print("Processing image's batches from sub-dataset: {}".format(dataset))
             new_name = '{}_{}.{}'.format(name, dataset, extension)
-            dataset_folder = os.path.join(settings.RAW_CODES_FOLDER, dataset)
-            clean_create_folder(dataset_folder)
-            formatted_data = {'raw_codes': [], 'labels': []}
-            counter = 0
+            formatted_data = {'codes': [], 'labels': []}
+            self.process_data(dataset, formatted_data)
+            self.format_for_LC_KSVD(formatted_data)
 
-            for data in self.dataloaders[dataset]:
-                inputs = data['image']
-                inputs = inputs.view(*inputs.size()[:2], -1).numpy()
-                # inputs.shape [32, 3, 1024]
-                labels = data['target'].numpy()
-
-                for input_, label in zip(inputs, labels):
-                    json_filename = '{}.json'.format(counter)
-                    formatted_data['raw_codes'].append(json_filename)
-                    formatted_data['labels'].append(label)
-
-                    with open(os.path.join(dataset_folder, json_filename), 'w') as file_:
-                        json.dump(np.mean(input_, axis=0).tolist(), file_)
-                        # np.mean(input_, axis=0).shape (1024)
-
-                    counter += 1
-
-            with open(os.path.join(settings.RAW_CODES_FOLDER, new_name), 'w') as file_:
+            with open(os.path.join(self.codes_folder, new_name), 'w') as file_:
                 json.dump(formatted_data, file_)
 
-        return formatted_data
+
+class RawImages(BaseDatasetCreator):
+    """
+    Creates a dataset for LC-KSVD using raw data
+
+    Usage:
+    ri = RawImages()
+    ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+    """
+
+    def __init__(self, *args, **kwargs):
+        """ Initializes the instance """
+        super().__init__(*args, codes_folder=settings.RAW_CODES_FOLDER, **kwargs)
+
+    def process_data(self, dataset, formatted_data):
+        """
+        Processes the data properly and places it in formatted_data.
+
+        Args:
+            dataset         (str): sub-dataset name
+            formatted_data (dict): dictionary to store all codes and labels
+        """
+        assert dataset in self.SUB_DATASETS
+        assert isinstance(formatted_data, dict)
+
+        dataset_folder = os.path.join(self.codes_folder, dataset)
+        clean_create_folder(dataset_folder)
+
+        counter = 0
+
+        for data in tqdm(self.dataloaders[dataset]):
+            inputs = data['image']
+            inputs = inputs.view(*inputs.size()[:2], -1).numpy()
+            # inputs.shape [32, 3, 1024]
+            labels = data['target'].numpy()
+
+            for input_, label in zip(inputs, labels):
+                json_filename = '{}.json'.format(counter)
+                formatted_data['codes'].append(json_filename)
+                formatted_data['labels'].append(label.tolist())
+
+                with open(os.path.join(dataset_folder, json_filename), 'w') as file_:
+                    json.dump(np.mean(input_, axis=0).tolist(), file_)
+                    # np.mean(input_, axis=0).shape (1024)
+
+                counter += 1
+
+        formatted_data['codes'] = np.array(formatted_data['codes'])
+        formatted_data['labels'] = np.array(formatted_data['labels'])
+
+
+class RandomFaces(BaseDatasetCreator):
+    """
+    Creates a dataset for LC-KSVD using random face descriptors
+
+    Usage:
+        randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+        randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the instance
+        Kwargs:
+            img_height       (int): height of the images
+            img_width        (int): width of images
+            fd_dimension     (int): dimension of random-face feature descriptor
+            concat_channels (bool): if True the image channels are concatenated,
+                                    else their mean is used
+        """
+        super().__init__(*args, codes_folder=settings.RANDOM_FACE_FOLDER, **kwargs)
+        self.img_height = kwargs.get('img_height', '')
+        self.img_width = kwargs.get('img_width', '')
+        self.fd_dimension = kwargs.get('fd_dimension', settings.FD_DIMENSION)
+        self.concat_channels = kwargs.get('concat_channels', False)
+        assert isinstance(self.concat_channels, bool)
+        self.randfaces_descriptor = RandFaces(self.img_height, self.img_width,
+                                              self.fd_dimension, self.concat_channels)
+
+    def process_data(self, dataset, formatted_data):
+        """
+        Processes the data properly and places it in formatted_data.
+
+        Args:
+            dataset         (str): sub-dataset name
+            formatted_data (dict): dictionary to store all codes and labels
+        """
+        assert dataset in self.SUB_DATASETS
+        assert isinstance(formatted_data, dict)
+
+        for data in tqdm(self.dataloaders[dataset]):
+            inputs = data['image'].numpy()
+            labels = data['target'].numpy()
+
+            for input_, label in zip(inputs, labels):
+                if self.concat_channels:
+                    processed_input = np.c_[input_[0], input_[1], input_[2]].ravel()
+                else:
+                    processed_input = np.mean(input_, axis=0).ravel()
+
+                formatted_data['codes'].append(
+                    self.randfaces_descriptor.get_feature_descriptor(processed_input).tolist())
+                formatted_data['labels'].append(label.tolist())
+
+        formatted_data['codes'] = np.array(formatted_data['codes'])
+        formatted_data['labels'] = np.array(formatted_data['labels'])
 
 
 def read_roi_image(file_path):

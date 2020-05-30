@@ -9,6 +9,7 @@ import string
 
 import numpy as np
 
+from constants.constants import CodeType
 import settings
 
 
@@ -87,29 +88,32 @@ def clean_json_filename(filename):
     return filename
 
 
-def load_cnn_codes(filename, numpy=True):
+def load_codes(filename, type_, numpy=True):
     """
     Loads and returns a dictionary with the CNN codes from filename at settings.CNN_CODES_FOLDER.
     Optionaly, cast the lists to numpy arrays
 
     Args:
         filename (str): Filename with json extension from settings.CNN_CODES_FOLDER
+        type_    (str): type of cnn code. See constants.constants.CodeType
         numpy   (bool): Where to cast the lists to numpy arrays or not.
-
     Returns:
-        {'cnn_codes': <list o lists or numpy array>, 'labels': <list or numpy array>}
+        {'codes': <list o lists or numpy array>, 'labels': <list or numpy array>}
     """
+    assert hasattr(type_, 'id')
+    assert type_.id in CodeType.CHOICES
+
     clean_json_filename(filename)
 
-    file_path = os.path.join(settings.CNN_CODES_FOLDER, filename)
+    file_path = os.path.join(CodeType.get_folder(type_.id), filename)
 
     assert os.path.isfile(file_path), '{} does not exit'.format(file_path)
 
     with open(file_path, 'r') as file_:
-        cnn_codes = json.load(file_)
+        codes = json.load(file_)
 
     if numpy:
-        for key in cnn_codes:
-            cnn_codes[key] = np.array(cnn_codes[key])
+        for key in codes:
+            codes[key] = np.array(codes[key])
 
-    return cnn_codes
+    return codes

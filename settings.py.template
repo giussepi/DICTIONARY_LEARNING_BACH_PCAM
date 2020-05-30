@@ -33,9 +33,13 @@ OVERLAP_COEFFICIENT = 0.5
 # overlap must be an integer to avoid errors with the sliding window algorithm
 OVERLAP = int(OVERLAP_COEFFICIENT * CUT_SIZE)
 
-TEST_SIZE = 0.15
+TEST_SIZE = .75  # 0.15
 
 RANDOM_STATE = 42
+
+RAW_CODES_FOLDER = 'raw_codes'
+RANDOM_FACE_FOLDER = 'randface_codes'
+FD_DIMENSION = 512  # dimension of random-face feature descriptor
 
 
 ###############################################################################
