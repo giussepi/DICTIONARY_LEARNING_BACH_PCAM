@@ -5,11 +5,12 @@ import numpy as np
 import os
 from sklearn.metrics import accuracy_score
 
+from constants.constants import CodeType
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from dl_algorithms.lc_ksvd.dksvd import DKSVD
 import settings
-from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit
-from utils.utils import load_cnn_codes
+from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit, RawImages, RandomFaces
+from utils.utils import load_codes
 
 
 def main():
@@ -28,6 +29,11 @@ def main():
     ###########################################################################
     # OUTPUT_FOLDER LABELS_FILENAME
     # output/{train/test}/labels.json  {'filename': label}
+    ri = RawImages()
+    ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+    # randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+    # randfaces.create_datasets_for_LC_KSVD('randfaces_dataset.json')
+    # TODO: REview if float64 is used all over the app
     ###########################################################################
 
     # faces projected to 504 dimensional vector, original crops 192x168 (32256)
@@ -55,12 +61,12 @@ if __name__ == '__main__':
     # model.visualize_model()
 
     # model.create_datasets_for_LC_KSVD('attempt3.json')
-    test = load_cnn_codes('attempt3_test.json')
-    # test['cnn_codes'].shape  # (512, 2100)
+    test = load_codes('attempt3_test.json', type_=CodeType.CNN)
+    # test['codes'].shape  # (512, 2100)
     # test['labels'].shape  # (4, 2100)
 
-    train = load_cnn_codes('attempt3_train.json')
-    # train['cnn_codes'].shape  # (512, 11900)
+    train = load_codes('attempt3_train.json', type_=CodeType.CNN)
+    # train['codes'].shape  # (512, 11900)
     # train['labels'].shape  # (4, 11900)
 
     ###########################################################################

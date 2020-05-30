@@ -78,16 +78,26 @@ model2.test()
 This method created too many mini patches. Thus, we did not tried to use this
 approach because the matrices will require war more memory than we have and also
 the number of variables will be too much to handle.
-
+- [ ] TODO: Implement a different way to handle the raw data
 - [ ] TODO: Think a feasible approach to try it. Maybe using just a few images
       per label.
-- [ ] TODO: write load_raw_images
 ``` python
 from utils.datasets.bach import RawImages
 
 ri = RawImages()
-ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
+	Note: See function definition to pass the correct parameters
+
+#### Random Faces feature descriptors
+``` python
+from utils/datasets/bach import RandomFaces
+
+randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+```
+	Note: See function definition to pass the correct parameters
+
 #### CNN codes
 ##### Create datasets for LC_KSVD
 ```python
@@ -99,16 +109,18 @@ model.create_datasets_for_LC_KSVD('mydataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
-##### load_cnn_codes
+##### load_codes
 ```python
-from utils.utils import load_cnn_codes
+from utils.utils import load_codes
+from constants.constants import CodeType
 
-test = load_cnn_codes('mydataset_test.json')
-test['cnn_codes'].shape  # (512, 2100)
+# Choose the right code type based on constants.constants.CodeType
+test = load_codes('mydataset_test.json', type_=CodeType.CNN)
+test['codes'].shape  # (512, 2100)
 test['labels'].shape  # (4, 2100)
 
-train = load_cnn_codes('attempt2_train.json')
-train['cnn_codes'].shape  # (512, 11900)
+train = load_codes('attempt2_train.json', type_=CodeType.CNN)
+train['codes'].shape  # (512, 11900)
 train['labels'].shape  # (4, 11900)
 ```
 	Note: See function definition to pass the correct parameters

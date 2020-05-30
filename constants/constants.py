@@ -3,6 +3,7 @@
 
 from collections import namedtuple
 from core.exceptions.dataset import LabelIdInvalid
+import settings
 
 # Colour to plot signals from each label
 # See https://matplotlib.org/3.2.1/tutorials/colors/colors.html
@@ -39,3 +40,23 @@ class Label:
     def get_choices_as_string(cls):
         """ Returns labels information """
         return ', '.join(tuple('{} : {}'.format(*item) for item in cls.CHOICES))
+
+
+class CodeType:
+    """ Holds the types of codes available  """
+    RAW = LabelItem(0, 'Raw data')
+    RANDFACE = LabelItem(1, 'Random-face feature descriptors')
+    CNN = LabelItem(2, 'CNN codes')
+
+    CHOICES = (RAW.id, RANDFACE.id, CNN.id)
+    TEMPLATES = {
+        RAW.id: settings.RAW_CODES_FOLDER,
+        RANDFACE.id: settings.RANDOM_FACE_FOLDER,
+        CNN.id: settings.CNN_CODES_FOLDER
+    }
+
+    @classmethod
+    def get_folder(cls, id_):
+        """ Returns folder path for the type of code provided """
+        assert id_ in cls.CHOICES
+        return cls.TEMPLATES[id_]
