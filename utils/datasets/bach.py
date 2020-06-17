@@ -84,6 +84,7 @@ class RescaleResize:
         )
         remove_folder(scaled_path)
 
+        # creating new images
         for folder in os.listdir(settings.TRAIN_PHOTOS_DATASET):
             current_folder = os.path.join(settings.TRAIN_PHOTOS_DATASET, folder)
 
@@ -99,6 +100,12 @@ class RescaleResize:
                         os.path.join(new_folder, image_name),
                         rescaled_img, format=self.image_format
                     )
+
+        # copying csv file
+        shutil.copyfile(
+            settings.TRAIN_PHOTOS_GROUND_TRUTH,
+            os.path.join(scaled_path, os.path.basename(settings.TRAIN_PHOTOS_GROUND_TRUTH))
+        )
 
 
 class MiniPatch:
