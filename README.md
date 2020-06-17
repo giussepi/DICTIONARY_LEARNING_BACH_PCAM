@@ -25,6 +25,19 @@ Attempt to improve classification results on
 
 ## Usage
 
+### Transform Dataset
+
+#### Rescale / Resize
+``` python
+from utils.datasets.bach import RescaleResize
+
+RescaleResize(.25)()  # rescales using .25 scaling factor
+RescaleResize((100, 100, 3))()  # resizes to (100, 100, 3)
+```
+	Note: See class definition to pass the correct parameters
+
+Don't forget to update the path of `settings.TRAIN_PHOTOS_DATASET`
+
 ### Create Train/Test split
 ```python
 from utils.datasets.bach import TrainTestSplit

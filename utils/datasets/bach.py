@@ -10,10 +10,12 @@ https://iciar2018-challenge.grand-challenge.org/Dataset/
 import json
 import os
 import shutil
+from pathlib import Path
 
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from skimage.transform import rescale, resize
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset
@@ -25,7 +27,78 @@ from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
 from utils.files import get_name_and_extension
 from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
-from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension
+from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension,\
+    remove_folder
+
+
+class RescaleResize:
+    """
+    Creates a rescaled version of BACH dataset
+
+    Usage:
+        RescaleResize(.25)()  # rescales using a .25 scaling factor
+        RescaleResize((100, 100, 3))()  # resizes to (100, 100, 3)
+    """
+
+    def __init__(self, scale, anti_aliasing=True, image_format='tiff', multichannel=True):
+        """
+        Initializes the object
+
+        Args:
+            scale (float or tuple of floats or ints): A tuple a integers will perform a resize transformation; otherwise, a rescale operations is performed. See scale and output_shape at https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.rescale and resize.
+            anti_aliasing                     (bool): Whether to apply a Gaussian filter to smooth the image prior to down-scaling.It is crucial to filter when down-sampling the image to avoid aliasing artifacts.
+            image_format                       (str): image format
+            multichannel                      (bool): Whether the last axis of the image is to be interpreted as multiple channels or another spatial dimension. Only applied when when rescaling.
+        """
+        assert isinstance(scale, (float, tuple))
+        assert isinstance(anti_aliasing, bool)
+        assert isinstance(image_format, str)
+        assert isinstance(multichannel, bool)
+
+        self.scale = scale
+        self.anti_aliasing = anti_aliasing
+        self.image_format = image_format
+        self.image_extension = image_format if image_format != 'tiff' else 'tif'
+        self.transform_kwargs = {'anti_aliasing': self.anti_aliasing}
+
+        if isinstance(scale, tuple) and isinstance(scale[0], int):
+            # Resizing
+            self.transform = resize
+        else:
+            # Rescaling
+            self.transform = rescale
+            self.transform_kwargs['multichannel'] = multichannel
+
+    def __call__(self):
+        """ Functor call """
+        self.__process()
+
+    def __process(self):
+        """
+        Creates transformed images and saves them in a directory at the same level of the
+        dataset directory
+        """
+        scaled_path = os.path.join(
+            Path(settings.TRAIN_PHOTOS_DATASET).parent,
+            '{}_{}'.format(os.path.basename(settings.TRAIN_PHOTOS_DATASET), self.scale)
+        )
+        remove_folder(scaled_path)
+
+        for folder in os.listdir(settings.TRAIN_PHOTOS_DATASET):
+            current_folder = os.path.join(settings.TRAIN_PHOTOS_DATASET, folder)
+
+            if Path(current_folder).is_dir():
+                new_folder = os.path.join(scaled_path, folder)
+                clean_create_folder(new_folder)
+                print('Creating new images from directory: {}'.format(folder))
+
+                for image_name in tqdm(list(filter(lambda x: x.endswith(self.image_extension), os.listdir(current_folder)))):
+                    image = plt.imread(os.path.join(current_folder, image_name))
+                    rescaled_img = self.transform(image, self.scale, **self.transform_kwargs)
+                    plt.imsave(
+                        os.path.join(new_folder, image_name),
+                        rescaled_img, format=self.image_format
+                    )
 
 
 class MiniPatch:
