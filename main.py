@@ -61,11 +61,11 @@ if __name__ == '__main__':
     # model.visualize_model()
 
     # model.create_datasets_for_LC_KSVD('attempt3.json')
-    test = load_codes('attempt3_test.json', type_=CodeType.CNN)
+    test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
     # test['codes'].shape  # (512, 2100)
     # test['labels'].shape  # (4, 2100)
 
-    train = load_codes('attempt3_train.json', type_=CodeType.CNN)
+    train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
     # train['codes'].shape  # (512, 11900)
     # train['labels'].shape  # (4, 11900)
 
@@ -78,43 +78,43 @@ if __name__ == '__main__':
     # np.save('Tinit_T.npy', Tinit_T, False)
     # np.save('Winit_T.npy', Winit_T, False)
     # np.save('Q.npy', Q, False)
-    # D, X, T, W = lcksvd.labelconsistentksvd1(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T)
+    # D, X, T, W = lcksvd.labelconsistentksvd1(train['codes'], Dinit, train['labels'], Q, Tinit_T)
     # np.save('D.npy', D, False)
     # np.save('X.npy', X, False)
     # np.save('T.npy', T, False)
     # np.save('W.npy', W, False)
-    # predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+    # predictions, gamma = lcksvd.classification(D, W, test['codes'])
     # print('\nFinal recognition rate for LC-KSVD1 is : {0:.4f}'.format(
     #     accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
 
     ###########################################################################
     #                                 LC-KSVD2                                #
     ###########################################################################
-    # lcksvd = DKSVD(dictsize=570, timeit=True)
-    # # Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
-    # # np.save('Dinit.npy', Dinit, False)
-    # # np.save('Tinit_T.npy', Tinit_T, False)
-    # # np.save('Winit_T.npy', Winit_T, False)
-    # # np.save('Q.npy', Q, False)
+    lcksvd = DKSVD(dictsize=570, timeit=True)
+    Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+    np.save('Dinit.npy', Dinit, False)
+    np.save('Tinit_T.npy', Tinit_T, False)
+    np.save('Winit_T.npy', Winit_T, False)
+    np.save('Q.npy', Q, False)
 
-    # Dinit = np.load('Dinit.npy')
-    # Tinit_T = np.load('Tinit_T.npy')
-    # Winit_T = np.load('Winit_T.npy')
-    # Q = np.load('Q.npy')
-    # D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
-    # np.save('D_2.npy', D, False)
-    # np.save('X_2.npy', X, False)
-    # np.save('T_2.npy', T, False)
-    # np.save('W_2.npy', W, False)
-    # predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
-    # print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
-    #     accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
+    Dinit = np.load('Dinit.npy')
+    Tinit_T = np.load('Tinit_T.npy')
+    Winit_T = np.load('Winit_T.npy')
+    Q = np.load('Q.npy')
+    D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+    np.save('D_2.npy', D, False)
+    np.save('X_2.npy', X, False)
+    np.save('T_2.npy', T, False)
+    np.save('W_2.npy', W, False)
+    predictions, gamma = lcksvd.classification(D, W, test['codes'])
+    print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
+        accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
 
     ###########################################################################
     #                                  D-KSVD                                 #
     ###########################################################################
-    lcksvd = DKSVD(dictsize=570, timeit=True)
-    Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
-    predictions, gamma = lcksvd.classification(Dinit, Winit, train['cnn_codes'])
-    print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
-        accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
+    # lcksvd = DKSVD(dictsize=570, timeit=True)
+    # Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
+    # predictions, gamma = lcksvd.classification(Dinit, Winit, train['codes'])
+    # print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
+    #     accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
