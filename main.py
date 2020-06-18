@@ -29,7 +29,7 @@ def main():
     ###########################################################################
     # OUTPUT_FOLDER LABELS_FILENAME
     # output/{train/test}/labels.json  {'filename': label}
-    ri = RawImages()
+    ri = RawImages(concat_channels=False)
     ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     # randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
     # randfaces.create_datasets_for_LC_KSVD('randfaces_dataset.json')

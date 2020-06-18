@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from PIL import Image
 from skimage.transform import rescale, resize
 from sklearn.model_selection import train_test_split
 import torch
@@ -45,7 +46,8 @@ class RescaleResize:
         Initializes the object
 
         Args:
-            scale (float or tuple of floats or ints): A tuple a integers will perform a resize transformation; otherwise, a rescale operations is performed. See scale and output_shape at https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.rescale and resize.
+            #skimage.transform.rescale and resize.
+            scale (float or tuple of floats or ints): A tuple a integers will perform a resize transformation; otherwise, a rescale operations is performed. See scale and output_shape at https://scikit-image.org/docs/dev/api/skimage.transform.html
             anti_aliasing                     (bool): Whether to apply a Gaussian filter to smooth the image prior to down-scaling.It is crucial to filter when down-sampling the image to avoid aliasing artifacts.
             image_format                       (str): image format
             multichannel                      (bool): Whether the last axis of the image is to be interpreted as multiple channels or another spatial dimension. Only applied when when rescaling.
@@ -59,6 +61,7 @@ class RescaleResize:
         self.anti_aliasing = anti_aliasing
         self.image_format = image_format
         self.image_extension = image_format if image_format != 'tiff' else 'tif'
+        self.image_extension = '.{}'.format(self.image_extension)
         self.transform_kwargs = {'anti_aliasing': self.anti_aliasing}
 
         if isinstance(scale, tuple) and isinstance(scale[0], int):
@@ -96,12 +99,11 @@ class RescaleResize:
                 for image_name in tqdm(list(filter(lambda x: x.endswith(self.image_extension), os.listdir(current_folder)))):
                     image = plt.imread(os.path.join(current_folder, image_name))
                     rescaled_img = self.transform(image, self.scale, **self.transform_kwargs)
-                    plt.imsave(
-                        os.path.join(new_folder, image_name),
-                        rescaled_img, format=self.image_format
-                    )
 
-        # copying csv file
+                    pil_img = Image.fromarray((rescaled_img * 255 / np.max(rescaled_img)).astype(np.uint8))
+                    pil_img.save(os.path.join(new_folder, image_name))
+
+        # copyting CSV file
         shutil.copyfile(
             settings.TRAIN_PHOTOS_GROUND_TRUTH,
             os.path.join(scaled_path, os.path.basename(settings.TRAIN_PHOTOS_GROUND_TRUTH))
@@ -216,7 +218,7 @@ class MiniPatch:
         Reads the images from self.image_list and creates the
         minipatch json files
         """
-        print("Processing TIFF images to create minipathes")
+        print("Processing images to create minipathes")
         for image_path, folder in tqdm(self.image_list):
             image = plt.imread(image_path)
             h, w = image.shape[:2]
@@ -515,13 +517,21 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-    ri = RawImages()
+    ri = RawImages(concat_channels=False)
     ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
     def __init__(self, *args, **kwargs):
-        """ Initializes the instance """
+        """
+        Initializes the instance
+
+        Kwargs:
+            concat_channels (bool): if True the image channels are concatenated,
+                                    else their mean is used
+        """
         super().__init__(*args, codes_folder=settings.RAW_CODES_FOLDER, **kwargs)
+        self.concat_channels = kwargs.get('concat_channels', False)
+        assert isinstance(self.concat_channels, bool)
 
     def process_data(self, dataset, formatted_data):
         """
@@ -534,27 +544,18 @@ class RawImages(BaseDatasetCreator):
         assert dataset in self.SUB_DATASETS
         assert isinstance(formatted_data, dict)
 
-        dataset_folder = os.path.join(self.codes_folder, dataset)
-        clean_create_folder(dataset_folder)
-
-        counter = 0
-
         for data in tqdm(self.dataloaders[dataset]):
-            inputs = data['image']
-            inputs = inputs.view(*inputs.size()[:2], -1).numpy()
-            # inputs.shape [32, 3, 1024]
+            inputs = data['image'].numpy()
             labels = data['target'].numpy()
 
             for input_, label in zip(inputs, labels):
-                json_filename = '{}.json'.format(counter)
-                formatted_data['codes'].append(json_filename)
+                if self.concat_channels:
+                    processed_input = np.c_[input_[0], input_[1], input_[2]].ravel()
+                else:
+                    processed_input = np.mean(input_, axis=0).ravel()
+
+                formatted_data['codes'].append(processed_input.tolist())
                 formatted_data['labels'].append(label.tolist())
-
-                with open(os.path.join(dataset_folder, json_filename), 'w') as file_:
-                    json.dump(np.mean(input_, axis=0).tolist(), file_)
-                    # np.mean(input_, axis=0).shape (1024)
-
-                counter += 1
 
         formatted_data['codes'] = np.array(formatted_data['codes'])
         formatted_data['labels'] = np.array(formatted_data['labels'])
