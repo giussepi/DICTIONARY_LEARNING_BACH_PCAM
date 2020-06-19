@@ -46,7 +46,16 @@ TrainTestSplit()()
 ```
 	Note: See class definition to pass the correct parameters
 
-### Create Minipatches
+### Create ROI files
+#### Using whole images
+```python
+from utils.datasets.bach import WholeImage
+
+WholeImage()()
+```
+	Note: See class definition to pass the correct parameters
+
+#### Using mini-patches
 ```python
 from utils.datasets.bach import MiniPatch
 

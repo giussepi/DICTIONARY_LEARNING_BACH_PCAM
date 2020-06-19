@@ -110,15 +110,22 @@ class RescaleResize:
         )
 
 
-class MiniPatch:
+class BasePrepareDataset:
     """
-    Creates minipatches for each TIFF files at settings.TRAIN_SPLIT_FILENAME and
-    settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
-    for each train and test folder.
+    Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME
+    and settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
+    settings.TRAIN_FOLDER_NAME directories respectively. Also for creates the labels file
+    for each train and test directory.
+
+    Use it as a base class to create your own ROI JSON files. Just make sure you override the
+    _create_json_files method.
 
     Usage:
-        MiniPatch()()
+        class MyPatches(BasePrepareDataset):
+            def _create_json_files(self):
+                # some stuff
+
+        MyPatches()()
     """
 
     def __init__(self, *args, **kwargs):
@@ -132,9 +139,9 @@ class MiniPatch:
 
     def __call__(self):
         """ Functor call """
-        self.__load_image_list()
-        self.__create_minipatches()
-        self.__create_labels()
+        self._load_image_list()
+        self._create_json_files()
+        self._create_labels()
 
     @staticmethod
     def read_split_file(filename):
@@ -148,7 +155,7 @@ class MiniPatch:
 
         return data
 
-    def __load_image_list(self):
+    def _load_image_list(self):
         """
         Loads the train test json files, creates the paths to the TIFF images into a list, and
         assings the list to self.image_list.
@@ -168,7 +175,7 @@ class MiniPatch:
             ))
 
     @staticmethod
-    def __create_image_json_file(filename, folder, source_filename, x, y, xmax, ymax):
+    def _create_image_json_file(filename, folder, source_filename, x, y, xmax, ymax):
         """
         Creates a roi json file at settings.OUTPUT_FOLDER + folder + filename using the provided
         arguments
@@ -195,7 +202,7 @@ class MiniPatch:
             json.dump(data, _file)
 
     @staticmethod
-    def __format_clean_filename(filename, x_suffix, y_suffix):
+    def _format_clean_filename(filename, x_suffix, y_suffix):
         """
         Extracts and reformats the filename using the suffixes provided to create a file name
         for its json file
@@ -213,60 +220,27 @@ class MiniPatch:
 
         return genfilename.replace(" ", "_")
 
-    def __create_minipatches(self):
+    def _create_json_files(self):
         """
-        Reads the images from self.image_list and creates the
-        minipatch json files
+        * Processes the WSIs and saves rois as CSV files
+        * Must be overridden
         """
-        print("Processing images to create minipathes")
-        for image_path, folder in tqdm(self.image_list):
-            image = plt.imread(image_path)
-            h, w = image.shape[:2]
-            y = 0
+        # Example:
+        # print("Processing images to create json files")
+        # for image_path, folder in tqdm(self.image_list):
+        #     image = plt.imread(image_path)
+        #     h, w = image.shape[:2]
 
-            while y <= (h-settings.CUT_SIZE):
-                x = 0
-                while x <= (w-settings.CUT_SIZE):
-                    self.__create_image_json_file(
-                        self.__format_clean_filename(image_path, x, y), folder, image_path,
-                        x, y,
-                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
-                    )
-
-                    x += settings.OVERLAP
-
-                if (x-settings.CUT_SIZE) <= (settings.HOLDBACK*settings.CUT_SIZE):
-                    x = w - settings.CUT_SIZE
-
-                    self.__create_image_json_file(
-                        self.__format_clean_filename(image_path, x, y), folder, image_path,
-                        x, y,
-                        w, y+settings.CUT_SIZE
-                    )
-
-                y += settings.OVERLAP
-
-            if ((h/settings.CUT_SIZE) - (h//settings.CUT_SIZE)) >= settings.HOLDBACK:
-                x = 0
-                y = h - settings.CUT_SIZE
-                while x <= (w-settings.CUT_SIZE):
-                    self.__create_image_json_file(
-                        self.__format_clean_filename(image_path, x, y), folder, image_path,
-                        x, y,
-                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
-                    )
-
-                    x += settings.OVERLAP
-
-                self.__create_image_json_file(
-                    self.__format_clean_filename(image_path, w-settings.CUT_SIZE, h-settings.CUT_SIZE),
-                    folder, image_path,
-                    w-settings.CUT_SIZE, h-settings.CUT_SIZE,
-                    w, h
-                )
+        #     # You can create the ROI files you want just make sure to used the following
+        #     # methods when saving them
+        #     self._create_image_json_file(
+        #         self._format_clean_filename(image_path, x, y),
+        #         folder, image_path, 0, 0, w, h
+        #     )
+        raise NotImplementedError
 
     @staticmethod
-    def __create_labels():
+    def _create_labels():
         """
         Read the files from train and test folders and creates a dictionary with
         the format key: filename, value: label. Each dictionary is saved as a JSON
@@ -295,6 +269,99 @@ class MiniPatch:
 
             with open(file_path, 'w') as file_:
                 json.dump(dict(zip(filenames, labels)), file_)
+
+
+class MiniPatch(BasePrepareDataset):
+    """
+    Creates minipatches for each TIFF files at settings.TRAIN_SPLIT_FILENAME and
+    settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
+    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    for each train and test folder.
+
+    Usage:
+        MiniPatch()()
+    """
+
+    def _create_json_files(self):
+        """
+        Reads the images from self.image_list and creates the
+        minipatch json files
+        """
+        print("Processing images to create minipathes")
+        for image_path, folder in tqdm(self.image_list):
+            image = plt.imread(image_path)
+            h, w = image.shape[:2]
+            y = 0
+
+            while y <= (h-settings.CUT_SIZE):
+                x = 0
+                while x <= (w-settings.CUT_SIZE):
+                    self._create_image_json_file(
+                        self._format_clean_filename(image_path, x, y), folder, image_path,
+                        x, y,
+                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
+                    )
+
+                    x += settings.OVERLAP
+
+                if (x-settings.CUT_SIZE) <= (settings.HOLDBACK*settings.CUT_SIZE):
+                    x = w - settings.CUT_SIZE
+
+                    self._create_image_json_file(
+                        self._format_clean_filename(image_path, x, y), folder, image_path,
+                        x, y,
+                        w, y+settings.CUT_SIZE
+                    )
+
+                y += settings.OVERLAP
+
+            if ((h/settings.CUT_SIZE) - (h//settings.CUT_SIZE)) >= settings.HOLDBACK:
+                x = 0
+                y = h - settings.CUT_SIZE
+                while x <= (w-settings.CUT_SIZE):
+                    self._create_image_json_file(
+                        self._format_clean_filename(image_path, x, y), folder, image_path,
+                        x, y,
+                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
+                    )
+
+                    x += settings.OVERLAP
+
+                self._create_image_json_file(
+                    self._format_clean_filename(image_path, w-settings.CUT_SIZE, h-settings.CUT_SIZE),
+                    folder, image_path,
+                    w-settings.CUT_SIZE, h-settings.CUT_SIZE,
+                    w, h
+                )
+
+
+class WholeImage(BasePrepareDataset):
+    """
+    Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME and
+    settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
+    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    for each train and test folder.
+
+    Use it to work with the whole images instead of patches.
+
+    Usage:
+        WholeImage()()
+    """
+
+    def _create_json_files(self):
+        """
+        Reads the images from self.image_list and creates the
+        the WSI JSON files
+        """
+        print("Processing images to create whole image JSON files")
+        for image_path, folder in tqdm(self.image_list):
+            image = plt.imread(image_path)
+            h, w = image.shape[:2]
+
+            self._create_image_json_file(
+                self._format_clean_filename(image_path, 0, 0),
+                folder, image_path, 0, 0, w, h
+            )
 
 
 class TrainTestSplit:
