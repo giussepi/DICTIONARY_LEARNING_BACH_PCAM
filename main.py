@@ -5,31 +5,33 @@ import numpy as np
 import os
 from sklearn.metrics import accuracy_score
 
-from constants.constants import CodeType
+from constants.constants import CodeType, ProcessImageOption
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from dl_algorithms.lc_ksvd.dksvd import DKSVD
 import settings
-from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit, RawImages, RandomFaces
+from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit, RawImages, RandomFaces, WholeImage, RescaleResize
 from utils.utils import load_codes
 
 
 def main():
     """  """
     # TODO: the first we need to perform the train/test split and then create the minipatches
+    RescaleResize(.0625)()
 
     plot_n_first_json_images(15, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
                              (9, 9), False, 'my_folder', False, True, remove_axes=False, dpi=100)
     # plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
     #                          (9, 9), True, 'my_folder', True, True)
     TrainTestSplit()()
-    MiniPatch()()
+    # MiniPatch()()
+    WholeImage()()
 
     ###########################################################################
     #                                 fsadfsdf                                #
     ###########################################################################
     # OUTPUT_FOLDER LABELS_FILENAME
     # output/{train/test}/labels.json  {'filename': label}
-    ri = RawImages(concat_channels=False)
+    ri = RawImages(process_method=ProcessImageOption.GRAYSCALE)
     ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     # randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
     # randfaces.create_datasets_for_LC_KSVD('randfaces_dataset.json')

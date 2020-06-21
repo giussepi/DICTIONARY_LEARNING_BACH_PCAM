@@ -16,13 +16,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 from PIL import Image
+from skimage.color import rgb2gray
 from skimage.transform import rescale, resize
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from constants.constants import Label
+from constants.constants import Label, ProcessImageOption, LabelItem
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
@@ -46,7 +47,7 @@ class RescaleResize:
         Initializes the object
 
         Args:
-            #skimage.transform.rescale and resize.
+            # skimage.transform.rescale and resize.
             scale (float or tuple of floats or ints): A tuple a integers will perform a resize transformation; otherwise, a rescale operations is performed. See scale and output_shape at https://scikit-image.org/docs/dev/api/skimage.transform.html
             anti_aliasing                     (bool): Whether to apply a Gaussian filter to smooth the image prior to down-scaling.It is crucial to filter when down-sampling the image to avoid aliasing artifacts.
             image_format                       (str): image format
@@ -476,14 +477,17 @@ class BaseDatasetCreator(TransformsMixins):
         """
         Initializes the instance
         Kwargs:
-            data_transforms (dict): data transformations to be applied. See TransformsMixins definition
-            codes_folder     (str): folder to store the generated codes
+            data_transforms     (dict): data transformations to be applied. See TransformsMixins definition
+            codes_folder         (str): folder to store the generated codes
+            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
         """
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
         self.codes_folder = kwargs.get('codes_folder', '')
+        self.process_method = kwargs.get('process_method', ProcessImageOption.MEAN)
         assert isinstance(self.data_transforms, dict)
         assert isinstance(self.codes_folder, str)
         assert self.codes_folder != ''
+        assert ProcessImageOption.is_valid_option(self.process_method)
         self.image_datasets = {
             x: BACHDataset(
                 os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
@@ -496,6 +500,23 @@ class BaseDatasetCreator(TransformsMixins):
             for x in self.SUB_DATASETS
         }
         self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
+
+    def process_input(self, input_):
+        """
+        Processes the input_ image based on self.process_method and returns the result
+
+        Args:
+            input_ (np.ndarray): numpy array
+        """
+        assert isinstance(input_, np.ndarray)
+
+        if self.process_method.id == ProcessImageOption.CONCATENATE.id:
+            return np.c_[input_[0], input_[1], input_[2]].ravel()
+
+        if self.process_method.id == ProcessImageOption.GRAYSCALE.id:
+            return rgb2gray(np.reshape(input_, (*input_.shape[1:], 3))).ravel()
+
+        return np.mean(input_, axis=0).ravel()
 
     def process_data(self, dataset, formatted_data):
         """
@@ -514,7 +535,6 @@ class BaseDatasetCreator(TransformsMixins):
         # assert dataset in self.SUB_DATASETS
         # assert isinstance(formatted_data, dict)
 
-        # counter = 0
         #
         # for data in tqdm(self.dataloaders[dataset]):
         #     inputs = data['image'].numpy()
@@ -522,10 +542,9 @@ class BaseDatasetCreator(TransformsMixins):
 
         #     for input_, label in zip(inputs, labels):
         #         # Do something cool
-        #         processed_input = ...
-        #         formatted_data['codes'].append(processed_input)
-        #         formatted_data['labels'].append(label_)
-        #         counter += 1
+        #         processed_input = self.process_input(input_) # or define your own way
+        #         formatted_data['codes'].append(processed_input.tolist())
+        #         formatted_data['labels'].append(label.tolist())
 
         #     # Don't forget to provide numpy arrays
         #     formatted_data['codes'] = np.array(formatted_data['codes'])
@@ -584,7 +603,7 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-    ri = RawImages(concat_channels=False)
+    ri = RawImages(process_method=ProcessImageOption.MEAN)
     ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
@@ -593,12 +612,9 @@ class RawImages(BaseDatasetCreator):
         Initializes the instance
 
         Kwargs:
-            concat_channels (bool): if True the image channels are concatenated,
-                                    else their mean is used
+            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
         """
         super().__init__(*args, codes_folder=settings.RAW_CODES_FOLDER, **kwargs)
-        self.concat_channels = kwargs.get('concat_channels', False)
-        assert isinstance(self.concat_channels, bool)
 
     def process_data(self, dataset, formatted_data):
         """
@@ -616,11 +632,7 @@ class RawImages(BaseDatasetCreator):
             labels = data['target'].numpy()
 
             for input_, label in zip(inputs, labels):
-                if self.concat_channels:
-                    processed_input = np.c_[input_[0], input_[1], input_[2]].ravel()
-                else:
-                    processed_input = np.mean(input_, axis=0).ravel()
-
+                processed_input = self.process_input(input_)
                 formatted_data['codes'].append(processed_input.tolist())
                 formatted_data['labels'].append(label.tolist())
 
@@ -633,7 +645,7 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.MEAN)
         randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
@@ -641,18 +653,16 @@ class RandomFaces(BaseDatasetCreator):
         """
         Initializes the instance
         Kwargs:
+            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
             img_height       (int): height of the images
             img_width        (int): width of images
             fd_dimension     (int): dimension of random-face feature descriptor
-            concat_channels (bool): if True the image channels are concatenated,
-                                    else their mean is used
         """
         super().__init__(*args, codes_folder=settings.RANDOM_FACE_FOLDER, **kwargs)
         self.img_height = kwargs.get('img_height', '')
         self.img_width = kwargs.get('img_width', '')
         self.fd_dimension = kwargs.get('fd_dimension', settings.FD_DIMENSION)
-        self.concat_channels = kwargs.get('concat_channels', False)
-        assert isinstance(self.concat_channels, bool)
+        self.concat_channels = self.process_method.id == ProcessImageOption.CONCATENATE.id
         self.randfaces_descriptor = RandFaces(self.img_height, self.img_width,
                                               self.fd_dimension, self.concat_channels)
 
@@ -672,11 +682,7 @@ class RandomFaces(BaseDatasetCreator):
             labels = data['target'].numpy()
 
             for input_, label in zip(inputs, labels):
-                if self.concat_channels:
-                    processed_input = np.c_[input_[0], input_[1], input_[2]].ravel()
-                else:
-                    processed_input = np.mean(input_, axis=0).ravel()
-
+                processed_input = self.process_input(input_)
                 formatted_data['codes'].append(
                     self.randfaces_descriptor.get_feature_descriptor(processed_input).tolist())
                 formatted_data['labels'].append(label.tolist())
