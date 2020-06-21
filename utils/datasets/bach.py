@@ -15,13 +15,15 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+from PIL import Image
+from skimage.color import rgb2gray
 from skimage.transform import rescale, resize
 from sklearn.model_selection import train_test_split
 import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from constants.constants import Label
+from constants.constants import Label, ProcessImageOption, LabelItem
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
@@ -45,7 +47,8 @@ class RescaleResize:
         Initializes the object
 
         Args:
-            scale (float or tuple of floats or ints): A tuple a integers will perform a resize transformation; otherwise, a rescale operations is performed. See scale and output_shape at https://scikit-image.org/docs/dev/api/skimage.transform.html#skimage.transform.rescale and resize.
+            # skimage.transform.rescale and resize.
+            scale (float or tuple of floats or ints): A tuple a integers will perform a resize transformation; otherwise, a rescale operations is performed. See scale and output_shape at https://scikit-image.org/docs/dev/api/skimage.transform.html
             anti_aliasing                     (bool): Whether to apply a Gaussian filter to smooth the image prior to down-scaling.It is crucial to filter when down-sampling the image to avoid aliasing artifacts.
             image_format                       (str): image format
             multichannel                      (bool): Whether the last axis of the image is to be interpreted as multiple channels or another spatial dimension. Only applied when when rescaling.
@@ -59,6 +62,7 @@ class RescaleResize:
         self.anti_aliasing = anti_aliasing
         self.image_format = image_format
         self.image_extension = image_format if image_format != 'tiff' else 'tif'
+        self.image_extension = '.{}'.format(self.image_extension)
         self.transform_kwargs = {'anti_aliasing': self.anti_aliasing}
 
         if isinstance(scale, tuple) and isinstance(scale[0], int):
@@ -96,27 +100,33 @@ class RescaleResize:
                 for image_name in tqdm(list(filter(lambda x: x.endswith(self.image_extension), os.listdir(current_folder)))):
                     image = plt.imread(os.path.join(current_folder, image_name))
                     rescaled_img = self.transform(image, self.scale, **self.transform_kwargs)
-                    plt.imsave(
-                        os.path.join(new_folder, image_name),
-                        rescaled_img, format=self.image_format
-                    )
 
-        # copying csv file
+                    pil_img = Image.fromarray((rescaled_img * 255 / np.max(rescaled_img)).astype(np.uint8))
+                    pil_img.save(os.path.join(new_folder, image_name))
+
+        # copyting CSV file
         shutil.copyfile(
             settings.TRAIN_PHOTOS_GROUND_TRUTH,
             os.path.join(scaled_path, os.path.basename(settings.TRAIN_PHOTOS_GROUND_TRUTH))
         )
 
 
-class MiniPatch:
+class BasePrepareDataset:
     """
-    Creates minipatches for each TIFF files at settings.TRAIN_SPLIT_FILENAME and
-    settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
-    for each train and test folder.
+    Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME
+    and settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
+    settings.TRAIN_FOLDER_NAME directories respectively. Also for creates the labels file
+    for each train and test directory.
+
+    Use it as a base class to create your own ROI JSON files. Just make sure you override the
+    _create_json_files method.
 
     Usage:
-        MiniPatch()()
+        class MyPatches(BasePrepareDataset):
+            def _create_json_files(self):
+                # some stuff
+
+        MyPatches()()
     """
 
     def __init__(self, *args, **kwargs):
@@ -130,9 +140,9 @@ class MiniPatch:
 
     def __call__(self):
         """ Functor call """
-        self.__load_image_list()
-        self.__create_minipatches()
-        self.__create_labels()
+        self._load_image_list()
+        self._create_json_files()
+        self._create_labels()
 
     @staticmethod
     def read_split_file(filename):
@@ -146,7 +156,7 @@ class MiniPatch:
 
         return data
 
-    def __load_image_list(self):
+    def _load_image_list(self):
         """
         Loads the train test json files, creates the paths to the TIFF images into a list, and
         assings the list to self.image_list.
@@ -166,7 +176,7 @@ class MiniPatch:
             ))
 
     @staticmethod
-    def __create_image_json_file(filename, folder, source_filename, x, y, xmax, ymax):
+    def _create_image_json_file(filename, folder, source_filename, x, y, xmax, ymax):
         """
         Creates a roi json file at settings.OUTPUT_FOLDER + folder + filename using the provided
         arguments
@@ -193,7 +203,7 @@ class MiniPatch:
             json.dump(data, _file)
 
     @staticmethod
-    def __format_clean_filename(filename, x_suffix, y_suffix):
+    def _format_clean_filename(filename, x_suffix, y_suffix):
         """
         Extracts and reformats the filename using the suffixes provided to create a file name
         for its json file
@@ -211,60 +221,27 @@ class MiniPatch:
 
         return genfilename.replace(" ", "_")
 
-    def __create_minipatches(self):
+    def _create_json_files(self):
         """
-        Reads the images from self.image_list and creates the
-        minipatch json files
+        * Processes the WSIs and saves rois as CSV files
+        * Must be overridden
         """
-        print("Processing TIFF images to create minipathes")
-        for image_path, folder in tqdm(self.image_list):
-            image = plt.imread(image_path)
-            h, w = image.shape[:2]
-            y = 0
+        # Example:
+        # print("Processing images to create json files")
+        # for image_path, folder in tqdm(self.image_list):
+        #     image = plt.imread(image_path)
+        #     h, w = image.shape[:2]
 
-            while y <= (h-settings.CUT_SIZE):
-                x = 0
-                while x <= (w-settings.CUT_SIZE):
-                    self.__create_image_json_file(
-                        self.__format_clean_filename(image_path, x, y), folder, image_path,
-                        x, y,
-                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
-                    )
-
-                    x += settings.OVERLAP
-
-                if (x-settings.CUT_SIZE) <= (settings.HOLDBACK*settings.CUT_SIZE):
-                    x = w - settings.CUT_SIZE
-
-                    self.__create_image_json_file(
-                        self.__format_clean_filename(image_path, x, y), folder, image_path,
-                        x, y,
-                        w, y+settings.CUT_SIZE
-                    )
-
-                y += settings.OVERLAP
-
-            if ((h/settings.CUT_SIZE) - (h//settings.CUT_SIZE)) >= settings.HOLDBACK:
-                x = 0
-                y = h - settings.CUT_SIZE
-                while x <= (w-settings.CUT_SIZE):
-                    self.__create_image_json_file(
-                        self.__format_clean_filename(image_path, x, y), folder, image_path,
-                        x, y,
-                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
-                    )
-
-                    x += settings.OVERLAP
-
-                self.__create_image_json_file(
-                    self.__format_clean_filename(image_path, w-settings.CUT_SIZE, h-settings.CUT_SIZE),
-                    folder, image_path,
-                    w-settings.CUT_SIZE, h-settings.CUT_SIZE,
-                    w, h
-                )
+        #     # You can create the ROI files you want just make sure to used the following
+        #     # methods when saving them
+        #     self._create_image_json_file(
+        #         self._format_clean_filename(image_path, x, y),
+        #         folder, image_path, 0, 0, w, h
+        #     )
+        raise NotImplementedError
 
     @staticmethod
-    def __create_labels():
+    def _create_labels():
         """
         Read the files from train and test folders and creates a dictionary with
         the format key: filename, value: label. Each dictionary is saved as a JSON
@@ -293,6 +270,99 @@ class MiniPatch:
 
             with open(file_path, 'w') as file_:
                 json.dump(dict(zip(filenames, labels)), file_)
+
+
+class MiniPatch(BasePrepareDataset):
+    """
+    Creates minipatches for each TIFF files at settings.TRAIN_SPLIT_FILENAME and
+    settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
+    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    for each train and test folder.
+
+    Usage:
+        MiniPatch()()
+    """
+
+    def _create_json_files(self):
+        """
+        Reads the images from self.image_list and creates the
+        minipatch json files
+        """
+        print("Processing images to create minipathes")
+        for image_path, folder in tqdm(self.image_list):
+            image = plt.imread(image_path)
+            h, w = image.shape[:2]
+            y = 0
+
+            while y <= (h-settings.CUT_SIZE):
+                x = 0
+                while x <= (w-settings.CUT_SIZE):
+                    self._create_image_json_file(
+                        self._format_clean_filename(image_path, x, y), folder, image_path,
+                        x, y,
+                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
+                    )
+
+                    x += settings.OVERLAP
+
+                if (x-settings.CUT_SIZE) <= (settings.HOLDBACK*settings.CUT_SIZE):
+                    x = w - settings.CUT_SIZE
+
+                    self._create_image_json_file(
+                        self._format_clean_filename(image_path, x, y), folder, image_path,
+                        x, y,
+                        w, y+settings.CUT_SIZE
+                    )
+
+                y += settings.OVERLAP
+
+            if ((h/settings.CUT_SIZE) - (h//settings.CUT_SIZE)) >= settings.HOLDBACK:
+                x = 0
+                y = h - settings.CUT_SIZE
+                while x <= (w-settings.CUT_SIZE):
+                    self._create_image_json_file(
+                        self._format_clean_filename(image_path, x, y), folder, image_path,
+                        x, y,
+                        x+settings.CUT_SIZE, y+settings.CUT_SIZE
+                    )
+
+                    x += settings.OVERLAP
+
+                self._create_image_json_file(
+                    self._format_clean_filename(image_path, w-settings.CUT_SIZE, h-settings.CUT_SIZE),
+                    folder, image_path,
+                    w-settings.CUT_SIZE, h-settings.CUT_SIZE,
+                    w, h
+                )
+
+
+class WholeImage(BasePrepareDataset):
+    """
+    Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME and
+    settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
+    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    for each train and test folder.
+
+    Use it to work with the whole images instead of patches.
+
+    Usage:
+        WholeImage()()
+    """
+
+    def _create_json_files(self):
+        """
+        Reads the images from self.image_list and creates the
+        the WSI JSON files
+        """
+        print("Processing images to create whole image JSON files")
+        for image_path, folder in tqdm(self.image_list):
+            image = plt.imread(image_path)
+            h, w = image.shape[:2]
+
+            self._create_image_json_file(
+                self._format_clean_filename(image_path, 0, 0),
+                folder, image_path, 0, 0, w, h
+            )
 
 
 class TrainTestSplit:
@@ -407,14 +477,17 @@ class BaseDatasetCreator(TransformsMixins):
         """
         Initializes the instance
         Kwargs:
-            data_transforms (dict): data transformations to be applied. See TransformsMixins definition
-            codes_folder     (str): folder to store the generated codes
+            data_transforms     (dict): data transformations to be applied. See TransformsMixins definition
+            codes_folder         (str): folder to store the generated codes
+            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
         """
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
         self.codes_folder = kwargs.get('codes_folder', '')
+        self.process_method = kwargs.get('process_method', ProcessImageOption.MEAN)
         assert isinstance(self.data_transforms, dict)
         assert isinstance(self.codes_folder, str)
         assert self.codes_folder != ''
+        assert ProcessImageOption.is_valid_option(self.process_method)
         self.image_datasets = {
             x: BACHDataset(
                 os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
@@ -427,6 +500,23 @@ class BaseDatasetCreator(TransformsMixins):
             for x in self.SUB_DATASETS
         }
         self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
+
+    def process_input(self, input_):
+        """
+        Processes the input_ image based on self.process_method and returns the result
+
+        Args:
+            input_ (np.ndarray): numpy array
+        """
+        assert isinstance(input_, np.ndarray)
+
+        if self.process_method.id == ProcessImageOption.CONCATENATE.id:
+            return np.c_[input_[0], input_[1], input_[2]].ravel()
+
+        if self.process_method.id == ProcessImageOption.GRAYSCALE.id:
+            return rgb2gray(np.reshape(input_, (*input_.shape[1:], 3))).ravel()
+
+        return np.mean(input_, axis=0).ravel()
 
     def process_data(self, dataset, formatted_data):
         """
@@ -445,7 +535,6 @@ class BaseDatasetCreator(TransformsMixins):
         # assert dataset in self.SUB_DATASETS
         # assert isinstance(formatted_data, dict)
 
-        # counter = 0
         #
         # for data in tqdm(self.dataloaders[dataset]):
         #     inputs = data['image'].numpy()
@@ -453,10 +542,9 @@ class BaseDatasetCreator(TransformsMixins):
 
         #     for input_, label in zip(inputs, labels):
         #         # Do something cool
-        #         processed_input = ...
-        #         formatted_data['codes'].append(processed_input)
-        #         formatted_data['labels'].append(label_)
-        #         counter += 1
+        #         processed_input = self.process_input(input_) # or define your own way
+        #         formatted_data['codes'].append(processed_input.tolist())
+        #         formatted_data['labels'].append(label.tolist())
 
         #     # Don't forget to provide numpy arrays
         #     formatted_data['codes'] = np.array(formatted_data['codes'])
@@ -515,12 +603,17 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-    ri = RawImages()
+    ri = RawImages(process_method=ProcessImageOption.MEAN)
     ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
     def __init__(self, *args, **kwargs):
-        """ Initializes the instance """
+        """
+        Initializes the instance
+
+        Kwargs:
+            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
+        """
         super().__init__(*args, codes_folder=settings.RAW_CODES_FOLDER, **kwargs)
 
     def process_data(self, dataset, formatted_data):
@@ -534,27 +627,14 @@ class RawImages(BaseDatasetCreator):
         assert dataset in self.SUB_DATASETS
         assert isinstance(formatted_data, dict)
 
-        dataset_folder = os.path.join(self.codes_folder, dataset)
-        clean_create_folder(dataset_folder)
-
-        counter = 0
-
         for data in tqdm(self.dataloaders[dataset]):
-            inputs = data['image']
-            inputs = inputs.view(*inputs.size()[:2], -1).numpy()
-            # inputs.shape [32, 3, 1024]
+            inputs = data['image'].numpy()
             labels = data['target'].numpy()
 
             for input_, label in zip(inputs, labels):
-                json_filename = '{}.json'.format(counter)
-                formatted_data['codes'].append(json_filename)
+                processed_input = self.process_input(input_)
+                formatted_data['codes'].append(processed_input.tolist())
                 formatted_data['labels'].append(label.tolist())
-
-                with open(os.path.join(dataset_folder, json_filename), 'w') as file_:
-                    json.dump(np.mean(input_, axis=0).tolist(), file_)
-                    # np.mean(input_, axis=0).shape (1024)
-
-                counter += 1
 
         formatted_data['codes'] = np.array(formatted_data['codes'])
         formatted_data['labels'] = np.array(formatted_data['labels'])
@@ -565,7 +645,7 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.MEAN)
         randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
@@ -573,18 +653,16 @@ class RandomFaces(BaseDatasetCreator):
         """
         Initializes the instance
         Kwargs:
+            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
             img_height       (int): height of the images
             img_width        (int): width of images
             fd_dimension     (int): dimension of random-face feature descriptor
-            concat_channels (bool): if True the image channels are concatenated,
-                                    else their mean is used
         """
         super().__init__(*args, codes_folder=settings.RANDOM_FACE_FOLDER, **kwargs)
         self.img_height = kwargs.get('img_height', '')
         self.img_width = kwargs.get('img_width', '')
         self.fd_dimension = kwargs.get('fd_dimension', settings.FD_DIMENSION)
-        self.concat_channels = kwargs.get('concat_channels', False)
-        assert isinstance(self.concat_channels, bool)
+        self.concat_channels = self.process_method.id == ProcessImageOption.CONCATENATE.id
         self.randfaces_descriptor = RandFaces(self.img_height, self.img_width,
                                               self.fd_dimension, self.concat_channels)
 
@@ -604,11 +682,7 @@ class RandomFaces(BaseDatasetCreator):
             labels = data['target'].numpy()
 
             for input_, label in zip(inputs, labels):
-                if self.concat_channels:
-                    processed_input = np.c_[input_[0], input_[1], input_[2]].ravel()
-                else:
-                    processed_input = np.mean(input_, axis=0).ravel()
-
+                processed_input = self.process_input(input_)
                 formatted_data['codes'].append(
                     self.randfaces_descriptor.get_feature_descriptor(processed_input).tolist())
                 formatted_data['labels'].append(label.tolist())

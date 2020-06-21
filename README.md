@@ -46,7 +46,16 @@ TrainTestSplit()()
 ```
 	Note: See class definition to pass the correct parameters
 
-### Create Minipatches
+### Create ROI files
+#### Using whole images
+```python
+from utils.datasets.bach import WholeImage
+
+WholeImage()()
+```
+	Note: See class definition to pass the correct parameters
+
+#### Using mini-patches
 ```python
 from utils.datasets.bach import MiniPatch
 
@@ -97,7 +106,7 @@ the number of variables will be too much to handle.
 ``` python
 from utils.datasets.bach import RawImages
 
-ri = RawImages()
+ri = RawImages(process_method=ProcessImageOption.MEAN)
 data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
@@ -106,7 +115,7 @@ data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ``` python
 from utils/datasets/bach import RandomFaces
 
-randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.MEAN)
 data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters

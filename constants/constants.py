@@ -60,3 +60,18 @@ class CodeType:
         """ Returns folder path for the type of code provided """
         assert id_ in cls.CHOICES
         return cls.TEMPLATES[id_]
+
+
+class ProcessImageOption:
+    """ Holds the types of options to process image channels """
+    CONCATENATE = LabelItem(0, 'Concatenate')
+    GRAYSCALE = LabelItem(1, 'Grayscale')
+    MEAN = LabelItem(2, 'Mean')
+
+    CHOICES = (CONCATENATE.id, GRAYSCALE.id, MEAN.id)
+
+    @classmethod
+    def is_valid_option(cls, option):
+        """ Returns true if the id_ belongs to any of the choices """
+        assert isinstance(option, LabelItem)
+        return option.id in cls.CHOICES
