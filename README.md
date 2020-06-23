@@ -210,7 +210,8 @@ print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
 ```
 	Note: See function definition to pass the correct parameters
 
-### Visualize learned representations
+### Visualization tools
+#### Visualize learned representations
 ``` python
 import numpy as np
 
@@ -238,6 +239,27 @@ LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=L
 
 ```
 	Note: See class definition to pass the correct parameters
+
+#### Visualize dictionary atoms
+``` python
+from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from dl_algorithms.lc_ksvd.utils.plot_tools import AtomsPlotter
+from utils.utils import load_cnn_codes
+
+
+train = load_cnn_codes('attempt3_train.json')
+test = load_cnn_codes('attempt3_test.json')
+
+lcksvd = DKSVD(dictsize=570, timeit=True)
+ Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+
+D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+
+AtomsPlotter(dictionary=D, img_width=128, img_height=96, n_rows=10, n_cols=16)()
+```
+	Note: See class definition to pass the correct parameters
+
 
 ## Committing changes made on third-party repositories
 
