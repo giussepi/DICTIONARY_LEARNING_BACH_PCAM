@@ -645,7 +645,7 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.MEAN)
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE)
         randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 

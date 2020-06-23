@@ -115,7 +115,7 @@ data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ``` python
 from utils/datasets/bach import RandomFaces
 
-randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.MEAN)
+randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE)
 data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
