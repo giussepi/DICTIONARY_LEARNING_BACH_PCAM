@@ -514,7 +514,7 @@ class BaseDatasetCreator(TransformsMixins):
             return np.c_[input_[0], input_[1], input_[2]].ravel()
 
         if self.process_method.id == ProcessImageOption.GRAYSCALE.id:
-            return rgb2gray(np.reshape(input_, (*input_.shape[1:], 3))).ravel()
+            return rgb2gray(np.moveaxis(input_, [0, 1, 2], [2, 0, 1])).ravel()
 
         return np.mean(input_, axis=0).ravel()
 
