@@ -20,7 +20,7 @@ class ImageNameInvalid(Exception):
 class LabelIdInvalid(Exception):
     """
     Exception to be raised when an id provided does not belong to any of
-    the labels
+    the BACH labels
     """
 
     def __init__(self, message=''):
@@ -30,4 +30,20 @@ class LabelIdInvalid(Exception):
         if not message:
             message = 'The id provided is not a between the valid options: {}'.format(
                 Label.get_choices_as_string())
+        super().__init__(message)
+
+
+class PCamLabelIdInvalid(Exception):
+    """
+    Exception to be raised when an id provided does not belong to any of
+    the PCam labels
+    """
+
+    def __init__(self, message=''):
+        """  """
+        # Avoiding circular dependency
+        from constants.constants import PCamLabel  # NOQA
+        if not message:
+            message = 'The id provided is not a between the valid options: {}'.format(
+                PCamLabel.get_choices_as_string())
         super().__init__(message)
