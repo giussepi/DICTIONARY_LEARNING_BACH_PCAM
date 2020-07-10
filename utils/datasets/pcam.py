@@ -19,6 +19,9 @@ from tqdm import tqdm
 
 import settings
 from constants.constants import PCamLabel
+from core.exceptions.dataset import PCamImageNameInvalid
+from utils.datasets.bach import BasePrepareDataset as BachBasePrepareDataset
+from utils.datasets.mixins import CreateJSONFilesMixin
 from utils.utils import clean_create_folder
 
 
@@ -156,3 +159,81 @@ class FormatProvidedDatasetSplits(BaseData):
             formatted_csv_path = os.path.join(settings.OUTPUT_FOLDER, filename)
             with open(formatted_csv_path, 'w') as file_:
                 json.dump(data.tolist(), file_)
+
+
+class BasePrepareDataset(BachBasePrepareDataset):
+    """
+    Creates minipatches for each PNG file at settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME; and saves them at
+    settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME,
+    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
+    for each train, valid and test folder.
+
+    Usage:
+        MiniPatch()()
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        * Initializes the object
+        * Cleans the train and ouput folders (performs delete and create operations)
+        """
+        super().__init__(*args, **kwargs)
+        clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.VALID_FOLDER_NAME))
+        self.split_files = [settings.TRAIN_SPLIT_FILENAME, settings.VALID_SPLIT_FILENAME,
+                            settings.TEST_SPLIT_FILENAME]
+        self.folder_names = [settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME,
+                             settings.TEST_FOLDER_NAME]
+
+    def _load_image_list(self):
+        """
+        Loads the train test json files, creates the paths to the TIFF images into a list, and
+        assings the list to self.image_list.
+        """
+        super()._load_image_list()
+
+        for filename, label in self.read_split_file(settings.VALID_SPLIT_FILENAME):
+            self.image_list.append((
+                os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
+                settings.VALID_FOLDER_NAME
+            ))
+
+    def _create_labels(self):
+        """
+        Read the files from train and test folders and creates a dictionary with
+        the format key: filename, value: label. Each dictionary is saved as a JSON
+        file in their correspoding folder with the name settings.LABELS_FILENAME.
+        """
+        for folder in self.folder_names:
+            folder_path = os.path.join(settings.OUTPUT_FOLDER, folder)
+            filenames = os.listdir(folder_path)
+            labels = []
+            print('Creating labels file for {} dataset'.format(folder))
+
+            for filename in tqdm(filenames):
+                if filename.startswith('t'):
+                    labels.append(PCamLabel.TUMOR.id)
+                elif filename.startswith('n'):
+                    labels.append(PCamLabel.NORMAL.id)
+                else:
+                    raise PCamImageNameInvalid()
+
+            file_path = os.path.join(folder_path, settings.LABELS_FILENAME)
+
+            with open(file_path, 'w') as file_:
+                json.dump(dict(zip(filenames, labels)), file_)
+
+
+class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
+    """
+    Creates JSON files covering the whole PNG images from settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME files; and saves them
+    at settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME and
+    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
+    for train, valid and test folders.
+
+    Use it to work with the whole images instead of patches.
+
+    Usage:
+        WholeImage()()
+    """

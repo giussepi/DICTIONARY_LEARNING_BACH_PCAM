@@ -1,6 +1,6 @@
 ## Usage
 
-### Adapt dataset
+### Adapt/format dataset
 
 #### HDF5 to PNG
 
@@ -21,4 +21,13 @@ Set `settings.TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'images')` 
 from utils.datasets.pcam FormatProvidedDatasetSplits
 
 FormatProvidedDatasetSplits()()
+```
+
+
+### Create ROI files
+#### Using whole images
+```python
+from utils.datasets.pcam import WholeImage
+
+WholeImage()()
 ```

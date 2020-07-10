@@ -23,10 +23,11 @@ import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from constants.constants import Label, ProcessImageOption, LabelItem
+import settings
+from constants.constants import Label, ProcessImageOption
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
-import settings
+from utils.datasets.mixins import CreateJSONFilesMixin
 from utils.files import get_name_and_extension
 from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
 from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension,\
@@ -135,6 +136,8 @@ class BasePrepareDataset:
         * Cleans the train and ouput folders (performs delete and create operations)
         """
         self.image_list = None
+        self.split_files = [settings.TRAIN_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
+        self.folder_names = [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]
         clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME))
         clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.TEST_FOLDER_NAME))
 
@@ -144,10 +147,9 @@ class BasePrepareDataset:
         self._create_json_files()
         self._create_labels()
 
-    @staticmethod
-    def read_split_file(filename):
+    def read_split_file(self, filename):
         """ Verifes the filename, loads the files and returns its content """
-        assert filename in [settings.TRAIN_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
+        assert filename in self.split_files
         filepath = os.path.join(settings.OUTPUT_FOLDER, filename)
         assert os.path.isfile(filepath)
 
@@ -175,8 +177,7 @@ class BasePrepareDataset:
                 settings.TEST_FOLDER_NAME
             ))
 
-    @staticmethod
-    def _create_image_json_file(filename, folder, source_filename, x, y, xmax, ymax):
+    def _create_image_json_file(self, filename, folder, source_filename, x, y, xmax, ymax):
         """
         Creates a roi json file at settings.OUTPUT_FOLDER + folder + filename using the provided
         arguments
@@ -188,7 +189,7 @@ class BasePrepareDataset:
             x, y, xmax, ymax (int): region of interest (roi) coordinates
         """
         assert isinstance(filename, str)
-        assert folder in [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]
+        assert folder in self.folder_names
         assert os.path.isfile(source_filename)
         assert isinstance(x, int)
         assert isinstance(y, int)
@@ -240,15 +241,13 @@ class BasePrepareDataset:
         #     )
         raise NotImplementedError
 
-    @staticmethod
-    def _create_labels():
+    def _create_labels(self):
         """
         Read the files from train and test folders and creates a dictionary with
         the format key: filename, value: label. Each dictionary is saved as a JSON
         file in their correspoding folder with the name settings.LABELS_FILENAME.
-
         """
-        for folder in [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]:
+        for folder in self.folder_names:
             folder_path = os.path.join(settings.OUTPUT_FOLDER, folder)
             filenames = os.listdir(folder_path)
             labels = []
@@ -274,7 +273,7 @@ class BasePrepareDataset:
 
 class MiniPatch(BasePrepareDataset):
     """
-    Creates minipatches for each TIFF files at settings.TRAIN_SPLIT_FILENAME and
+    Creates minipatches for each TIFF file at settings.TRAIN_SPLIT_FILENAME and
     settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
     settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
     for each train and test folder.
@@ -336,11 +335,11 @@ class MiniPatch(BasePrepareDataset):
                 )
 
 
-class WholeImage(BasePrepareDataset):
+class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     """
     Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME and
     settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
     for each train and test folder.
 
     Use it to work with the whole images instead of patches.
@@ -348,21 +347,6 @@ class WholeImage(BasePrepareDataset):
     Usage:
         WholeImage()()
     """
-
-    def _create_json_files(self):
-        """
-        Reads the images from self.image_list and creates the
-        the WSI JSON files
-        """
-        print("Processing images to create whole image JSON files")
-        for image_path, folder in tqdm(self.image_list):
-            image = plt.imread(image_path)
-            h, w = image.shape[:2]
-
-            self._create_image_json_file(
-                self._format_clean_filename(image_path, 0, 0),
-                folder, image_path, 0, 0, w, h
-            )
 
 
 class TrainTestSplit:
