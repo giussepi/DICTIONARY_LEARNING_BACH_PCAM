@@ -8,11 +8,13 @@ https://github.com/basveeling/pcam
 """
 
 import csv
+import json
 import os
 from collections import defaultdict
 
 import h5py
 import matplotlib.pyplot as plt
+import numpy as np
 from tqdm import tqdm
 
 import settings
@@ -20,7 +22,12 @@ from constants.constants import PCamLabel
 from utils.utils import clean_create_folder
 
 
-class HDF5_2_PNG:
+class BaseData:
+    """ Holds base data used during processing """
+    SUB_DATASETS = ['train', 'valid', 'test']
+
+
+class HDF5_2_PNG(BaseData):
     """
     Converts the HDF5 files from PathCamelyon dataset into PNG images and create a
     structure that can be consumed by the application
@@ -30,13 +37,11 @@ class HDF5_2_PNG:
     """
     # Example PCam h5 filename": camelyonpatch_level_2_split_test_x.h5
     BASE_FILE_PATTERN = 'camelyonpatch_level_2_split_{}_{}.h5'
-    SUB_DATASETS = ['train', 'valid', 'test']
 
     def __init__(self):
         """ Initialized the instance """
-        self.base_folder_path = os.path.join(settings.BASE_DATASET_LINK, 'images')
-        self.tumor_folder_path = os.path.join(self.base_folder_path, PCamLabel.TUMOR.name)
-        self.normal_folder_path = os.path.join(self.base_folder_path, PCamLabel.NORMAL.name)
+        self.tumor_folder_path = os.path.join(settings.TRAIN_PHOTOS_DATASET, PCamLabel.TUMOR.name)
+        self.normal_folder_path = os.path.join(settings.TRAIN_PHOTOS_DATASET, PCamLabel.NORMAL.name)
 
     def __call__(self):
         """ Functor call """
@@ -54,7 +59,7 @@ class HDF5_2_PNG:
         assert len(list_) >= 1
         assert isinstance(filename, str)
 
-        full_path = os.path.join(self.base_folder_path, filename)
+        full_path = os.path.join(settings.TRAIN_PHOTOS_DATASET, filename)
 
         with open(full_path, 'w') as file_:
             writer = csv.writer(file_)
@@ -111,3 +116,43 @@ class HDF5_2_PNG:
             pbar.update(1)
             self.__write_list_to_csv(full_ground_truth, 'full_ground_truth.csv')
             pbar.update(1)
+
+
+class FormatProvidedDatasetSplits(BaseData):
+    """
+    * Processes the train, valid and test datasets provided by PatchCamelyon and formatted
+      by HDF5_2_PNG.
+    * Creates CSV files in the settings.OUTPUT_FOLDER directory to be consumed by the application
+
+    Usage:
+        FormatProvidedDatasetSplits()()
+    """
+
+    def __init__(self):
+        """ Initializes the instance """
+        self.csv_output_filenames = [
+            settings.TRAIN_SPLIT_FILENAME,
+            settings.VALID_SPLIT_FILENAME,
+            settings.TEST_SPLIT_FILENAME
+        ]
+
+    def __call__(self):
+        """ Functor call """
+        self.__process_splits()
+
+    def __process_splits(self):
+        """
+        Processes the provided dataset splits and saves in CSV format to be consumed by the
+        application
+        """
+        clean_create_folder(settings.OUTPUT_FOLDER)
+
+        print("Formatting sub-datasets")
+        for filename, sub_dataset in tqdm(list(zip(self.csv_output_filenames, self.SUB_DATASETS))):
+            data = np.genfromtxt(
+                os.path.join(settings.TRAIN_PHOTOS_DATASET, '{}.csv'.format(sub_dataset)),
+                delimiter=',', dtype=np.str
+            )
+            formatted_csv_path = os.path.join(settings.OUTPUT_FOLDER, filename)
+            with open(formatted_csv_path, 'w') as file_:
+                json.dump(data.tolist(), file_)
