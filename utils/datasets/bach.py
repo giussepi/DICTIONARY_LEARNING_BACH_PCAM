@@ -789,6 +789,10 @@ def plot_n_first_json_images(
         shutil.rmtree(save_folder_path)
 
     print("Plotting images")
+
     for image in tqdm(os.listdir(read_folder_path)[:n_images]):
-        plot_json_img(
-            os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path, carousel, remove_axes, dpi)
+        if image != settings.LABELS_FILENAME:
+            plot_json_img(
+                os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path,
+                carousel, remove_axes, dpi
+            )
