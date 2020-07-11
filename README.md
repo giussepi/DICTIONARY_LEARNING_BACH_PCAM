@@ -97,12 +97,8 @@ model2.test()
 ### Feature extraction / Dimensionality reduction
 
 #### Raw images
-This method created too many mini patches. Thus, we did not tried to use this
-approach because the matrices will require war more memory than we have and also
-the number of variables will be too much to handle.
-- [ ] TODO: Implement a different way to handle the raw data
-- [ ] TODO: Think a feasible approach to try it. Maybe using just a few images
-      per label.
+If your images are big, you should consider using `RescaleResize` and/or `MiniPatch` classes
+to reduce their dimensionality. Thus, you will avoid issues with memory.
 ``` python
 from utils.datasets.bach import RawImages
 
