@@ -6,14 +6,21 @@ import os
 ###############################################################################
 #                            General Configuration                            #
 ###############################################################################
-
+# path to the main dataset directory
 BASE_DATASET_LINK = os.path.join('datasets', 'ICIAR 2018 BACH challenge')
 
+# path to the directory holding all the images grouped by labels in folders. e.g.
+# label1/<images labelled as label1>
+# label2/<images labelled as label2>
 TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos')
 
+# path to CSV file with the images info. Each row should have:
+# <image name>.png,<label>
+# the image name should have the format:
+# <first letter of the label> + <id> + '.png'
 TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv')
 
-TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_TestDataset', 'Photos')
+# TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_TestDataset', 'Photos')
 
 
 ###############################################################################
@@ -22,8 +29,10 @@ TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_
 OUTPUT_FOLDER = 'output'
 LABELS_FILENAME = 'labels.json'  # general name for labels file
 TRAIN_SPLIT_FILENAME = 'train.csv'  # original TIFF images
+VALID_SPLIT_FILENAME = 'valid.csv'
 TEST_SPLIT_FILENAME = 'test.csv'  # original TIFF images
 TRAIN_FOLDER_NAME = 'train'  # for minipatches
+VALID_FOLDER_NAME = 'valid'
 TEST_FOLDER_NAME = 'test'  # for minipatches
 
 HOLDBACK = 0.7
