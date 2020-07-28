@@ -1,30 +1,35 @@
 # -*- coding: utf-8 -*-
 """  """
 
-import numpy as np
 import os
+
+import numpy as np
 from sklearn.metrics import accuracy_score
 
+import settings
 from constants.constants import CodeType, ProcessImageOption
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from dl_algorithms.lc_ksvd.dksvd import DKSVD
-import settings
-from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit, RawImages, RandomFaces, WholeImage, RescaleResize
+from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit, \
+    RawImages, RandomFaces, WholeImage, RescaleResize
+from utils.datasets.pcam import WholeImage as PCamWholeImage, HDF5_2_PNG, FormatProvidedDatasetSplits
 from utils.utils import load_codes
 
 
 def main():
     """  """
-    # TODO: the first we need to perform the train/test split and then create the minipatches
-    RescaleResize(.0625)()
+    # HDF5_2_PNG()()
+    # FormatProvidedDatasetSplits()()
+    # PCamWholeImage()()
+
+    # RescaleResize(.0625)()
+    # TrainTestSplit()()
+
+    # MiniPatch()()
+    WholeImage()()
 
     plot_n_first_json_images(15, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
                              (9, 9), False, 'my_folder', False, True, remove_axes=False, dpi=100)
-    # plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
-    #                          (9, 9), True, 'my_folder', True, True)
-    TrainTestSplit()()
-    # MiniPatch()()
-    WholeImage()()
 
     ###########################################################################
     #                                 fsadfsdf                                #

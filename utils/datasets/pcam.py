@@ -15,6 +15,7 @@ from collections import defaultdict
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
+from PIL import Image
 from tqdm import tqdm
 
 import settings
@@ -105,7 +106,8 @@ class HDF5_2_PNG(BaseData):
                             saving_path = os.path.join(self.normal_folder_path, filename)
                             label = PCamLabel.NORMAL.name
 
-                        plt.imsave(saving_path, x_data[i], format='png')
+                        plt_image = Image.fromarray((x_data[i]).astype('uint8'))
+                        plt_image.save(saving_path)
                         ground_truth[sub_dataset].append([filename, label])
 
                     self.__write_list_to_csv(
