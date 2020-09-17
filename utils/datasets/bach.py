@@ -464,8 +464,11 @@ class BaseDatasetCreator(TransformsMixins):
             data_transforms     (dict): data transformations to be applied. See TransformsMixins definition
             codes_folder         (str): folder to store the generated codes
             process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
+            label_class         (type): Label class (see constants/constants.py)
         """
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
+        self.label_class = kwargs.get('label_class', '')
+        assert isinstance(self.label_class, type)
         self.codes_folder = kwargs.get('codes_folder', '')
         self.process_method = kwargs.get('process_method', ProcessImageOption.MEAN)
         assert isinstance(self.data_transforms, dict)
@@ -549,9 +552,9 @@ class BaseDatasetCreator(TransformsMixins):
 
         formatted_data['codes'] = formatted_data['codes'].T
         formatted_labels = np.zeros(
-            (len(Label.CHOICES), formatted_data['labels'].shape[0]), dtype=float)
+            (len(self.label_class.CHOICES), formatted_data['labels'].shape[0]), dtype=float)
 
-        for index, label_item in enumerate(Label.CHOICES):
+        for index, label_item in enumerate(self.label_class.CHOICES):
             formatted_labels[index, formatted_data['labels'] == label_item.id] = 1
 
         # Workaround to serialize numpy arrays as JSON
@@ -587,7 +590,7 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-    ri = RawImages(process_method=ProcessImageOption.MEAN)
+    ri = RawImages(process_method=ProcessImageOption.MEAN, label_class=Label)
     ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
@@ -629,7 +632,7 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE)
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label)
         randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 

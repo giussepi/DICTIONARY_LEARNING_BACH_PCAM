@@ -37,15 +37,22 @@ class HDF5_2_PNG(BaseData):
     structure that can be consumed by the application
 
     Usage:
-        HDF5_2_PNG()()
+        HDF5_2_PNG(only_center=True)()
     """
     # Example PCam h5 filename": camelyonpatch_level_2_split_test_x.h5
     BASE_FILE_PATTERN = 'camelyonpatch_level_2_split_{}_{}.h5'
 
-    def __init__(self):
-        """ Initialized the instance """
+    def __init__(self, only_center=False):
+        """
+        Initialized the instance
+
+        Args:
+            only_center (bool): If true the each image will include only the 32x32 pixels centre
+                                 used during labelling (PatchCamelyon dataset feature).
+        """
         self.tumor_folder_path = os.path.join(settings.TRAIN_PHOTOS_DATASET, PCamLabel.TUMOR.name)
         self.normal_folder_path = os.path.join(settings.TRAIN_PHOTOS_DATASET, PCamLabel.NORMAL.name)
+        self.only_center = only_center
 
     def __call__(self):
         """ Functor call """
@@ -106,7 +113,11 @@ class HDF5_2_PNG(BaseData):
                             saving_path = os.path.join(self.normal_folder_path, filename)
                             label = PCamLabel.NORMAL.name
 
-                        plt_image = Image.fromarray((x_data[i]).astype('uint8'))
+                        if self.only_center:
+                            plt_image = Image.fromarray((x_data[i][32:64, 32:64, :]).astype('uint8'))
+                        else:
+                            plt_image = Image.fromarray((x_data[i]).astype('uint8'))
+
                         plt_image.save(saving_path)
                         ground_truth[sub_dataset].append([filename, label])
 

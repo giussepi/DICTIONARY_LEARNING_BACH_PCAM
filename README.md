@@ -101,17 +101,19 @@ If your images are big, you should consider using `RescaleResize` and/or `MiniPa
 to reduce their dimensionality. Thus, you will avoid issues with memory.
 ``` python
 from utils.datasets.bach import RawImages
+from constants.constants import ProcessImageOption, Label
 
-ri = RawImages(process_method=ProcessImageOption.MEAN)
+ri = RawImages(process_method=ProcessImageOption.MEAN, label_class=Label)
 data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
 #### Random Faces feature descriptors
 ``` python
-from utils/datasets/bach import RandomFaces
+from utils.datasets.bach import RandomFaces
+from constants.constants import ProcessImageOption, Label
 
-randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE)
+randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label)
 data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
