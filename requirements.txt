@@ -24,3 +24,4 @@ nose
 torch
 torchvision
 scikit-image
+lcksvd @ https://github.com/giussepi/LC-KSVD/tarball/master

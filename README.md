@@ -10,15 +10,11 @@ Attempt to improve classification results on
 
    2. Activate your virtual environment
 
-   3. Make install.ssh executable
+   3. Install the dependencies
 
-       `$ chmod +x install.ssh`
+       ` pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir`
 
-   4. Install/update libraries and third-party repositories.
-
-       `$ ./install.ssh`
-
-   5. Copy settings.py.template into settings.py and set the general configuration settings properly
+   4. Copy settings.py.template into settings.py and set the general configuration settings properly
 
 	  `$ cp settings.py.template settings.py`
 
@@ -150,7 +146,7 @@ train['labels'].shape  # (4, 11900)
 import numpy as np
 from sklearn.metrics import accuracy_score
 
-from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from lc_ksvd.dksvd import DKSVD
 from utils.utils import load_cnn_codes
 
 
@@ -172,7 +168,7 @@ print('\nFinal recognition rate for LC-KSVD1 is : {0:.4f}'.format(
 import numpy as np
 from sklearn.metrics import accuracy_score
 
-from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from lc_ksvd.dksvd import DKSVD
 from utils.utils import load_cnn_codes
 
 
@@ -194,7 +190,7 @@ print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
 import numpy as np
 from sklearn.metrics import accuracy_score
 
-from dl_algorithms.lc_ksvd.dksvd import DKSVD
+from lc_ksvd.dksvd import DKSVD
 from utils.utils import load_cnn_codes
 
 train = load_cnn_codes('attempt3_train.json')
@@ -214,9 +210,9 @@ print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
 import numpy as np
 
 from constants.constants import Label, COLOURS
-from dl_algorithms.lc_ksvd.constants import PlotFilter
-from dl_algorithms.lc_ksvd.dksvd import DKSVD
-from dl_algorithms.lc_ksvd.utils.plot_tools import LearnedRepresentationPlotter
+from lc_ksvd.constants import PlotFilter
+from lc_ksvd.dksvd import DKSVD
+from lc_ksvd.utils.plot_tools import LearnedRepresentationPlotter
 from utils.utils import load_cnn_codes
 
 
@@ -240,8 +236,8 @@ LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=L
 
 #### Visualize dictionary atoms
 ``` python
-from dl_algorithms.lc_ksvd.dksvd import DKSVD
-from dl_algorithms.lc_ksvd.utils.plot_tools import AtomsPlotter
+from lc_ksvd.dksvd import DKSVD
+from lc_ksvd.utils.plot_tools import AtomsPlotter
 from utils.utils import load_cnn_codes
 
 
