@@ -25,3 +25,4 @@ torch
 torchvision
 scikit-image
 lcksvd @ https://github.com/giussepi/LC-KSVD/tarball/master
+gtorch_utils @ https://github.com/giussepi/gtorch_utils/tarball/main
