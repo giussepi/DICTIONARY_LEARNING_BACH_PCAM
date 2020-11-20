@@ -12,7 +12,7 @@ Attempt to improve classification results on
 
    3. Install the dependencies
 
-       ` pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir`
+       `pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir`
 
    4. Copy settings.py.template into settings.py and set the general configuration settings properly
 
