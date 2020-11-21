@@ -24,7 +24,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import settings
-from constants.constants import Label, ProcessImageOption
+from constants.constants import Label, ProcessImageOption, PCamSubDataset, SubDataset
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 from utils.datasets.mixins import CreateJSONFilesMixin
@@ -452,41 +452,47 @@ class BACHDataset(Dataset):
 
 class BaseDatasetCreator(TransformsMixins):
     """ Holds basic handles to create a dataset """
-    TRAIN = 'train'
-    TEST = 'test'
-
-    SUB_DATASETS = [TRAIN, TEST]
 
     def __init__(self, *args, **kwargs):
         """
         Initializes the instance
         Kwargs:
-            data_transforms     (dict): data transformations to be applied. See TransformsMixins definition
-            codes_folder         (str): folder to store the generated codes
-            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
-            label_class         (type): Label class (see constants/constants.py)
+            data_transforms      (dict): data transformations to be applied. See TransformsMixins definition
+            codes_folder          (str): folder to store the generated codes
+            process_method  (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
+            label_class          (type): Label class (see constants/constants.py)
+            sub_datasets (object class): Class holding subdataset information.
+                                         See constants.constants.SubDataset class
         """
+        # TODO: verify the torch data adjustment is not necessary here
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
         self.label_class = kwargs.get('label_class', '')
         assert isinstance(self.label_class, type)
         self.codes_folder = kwargs.get('codes_folder', '')
         self.process_method = kwargs.get('process_method', ProcessImageOption.MEAN)
+        sub_datasets = kwargs.get('sub_datasets', SubDataset)
         assert isinstance(self.data_transforms, dict)
         assert isinstance(self.codes_folder, str)
         assert self.codes_folder != ''
         assert ProcessImageOption.is_valid_option(self.process_method)
+        assert hasattr(sub_datasets, 'SUB_DATASETS')
+        self.sub_datasets = sub_datasets.SUB_DATASETS
+
+        # TODO: maybe the transform should happen at the very end, not before calculating
+        #       sift descriptors
         self.image_datasets = {
             x: BACHDataset(
                 os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
-            for x in self.SUB_DATASETS
+            for x in self.sub_datasets
         }
+
         self.dataloaders = {
             x: torch.utils.data.DataLoader(
                 self.image_datasets[x], batch_size=settings.BATCH_SIZE,
                 shuffle=True, num_workers=settings.NUM_WORKERS)
-            for x in self.SUB_DATASETS
+            for x in self.sub_datasets
         }
-        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
+        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.sub_datasets}
 
     def process_input(self, input_):
         """
@@ -519,7 +525,7 @@ class BaseDatasetCreator(TransformsMixins):
             formatted_data['code'] must be a numpy array with shape [num_images, ]
         """
         # Example:
-        # assert dataset in self.SUB_DATASETS
+        # assert dataset in self.sub_datasets
         # assert isinstance(formatted_data, dict)
 
         #
@@ -574,7 +580,7 @@ class BaseDatasetCreator(TransformsMixins):
         name, extension = get_filename_and_extension(cleaned_filename)
 
         print("Formatting and saving sub-datasets codes for LC-KSVD")
-        for dataset in self.SUB_DATASETS:
+        for dataset in self.sub_datasets:
             print("Processing image's batches from sub-dataset: {}".format(dataset))
             new_name = '{}_{}.{}'.format(name, dataset, extension)
             formatted_data = {'codes': [], 'labels': []}
@@ -590,8 +596,16 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-    ri = RawImages(process_method=ProcessImageOption.MEAN, label_class=Label)
-    ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
+
+        # for BACH
+        ri = RawImages(
+            process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=SubDataset)
+        # for PatchCamelyon
+        ri = RawImages(
+            process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+
+        ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
     def __init__(self, *args, **kwargs):
@@ -611,7 +625,7 @@ class RawImages(BaseDatasetCreator):
             dataset         (str): sub-dataset name
             formatted_data (dict): dictionary to store all codes and labels
         """
-        assert dataset in self.SUB_DATASETS
+        assert dataset in self.sub_datasets
         assert isinstance(formatted_data, dict)
 
         for data in tqdm(self.dataloaders[dataset]):
@@ -632,7 +646,13 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label)
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
+
+        # for BACH
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label, sub_datasets=SubDataset)
+        # for PatchCamelyon
+        randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.CONCATENATE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+
         randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
@@ -661,7 +681,7 @@ class RandomFaces(BaseDatasetCreator):
             dataset         (str): sub-dataset name
             formatted_data (dict): dictionary to store all codes and labels
         """
-        assert dataset in self.SUB_DATASETS
+        assert dataset in self.sub_datasets
         assert isinstance(formatted_data, dict)
 
         for data in tqdm(self.dataloaders[dataset]):

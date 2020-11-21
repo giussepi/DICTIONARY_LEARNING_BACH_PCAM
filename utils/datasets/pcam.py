@@ -13,25 +13,23 @@ import os
 from collections import defaultdict
 
 import h5py
-import matplotlib.pyplot as plt
 import numpy as np
+import torch
+from gtorch_utils.datasets.generic import BaseDataset
+from gutils.numpy_.numpy_ import LabelMatrixManager
 from PIL import Image
 from tqdm import tqdm
 
 import settings
-from constants.constants import PCamLabel
+from constants.constants import PCamLabel, PCamSubDataset
 from core.exceptions.dataset import PCamImageNameInvalid
 from utils.datasets.bach import BasePrepareDataset as BachBasePrepareDataset
 from utils.datasets.mixins import CreateJSONFilesMixin
-from utils.utils import clean_create_folder
+from utils.utils import clean_create_folder, load_codes, clean_json_filename, \
+    get_filename_and_extension
 
 
-class BaseData:
-    """ Holds base data used during processing """
-    SUB_DATASETS = ['train', 'valid', 'test']
-
-
-class HDF5_2_PNG(BaseData):
+class HDF5_2_PNG(PCamSubDataset):
     """
     Converts the HDF5 files from PathCamelyon dataset into PNG images and create a
     structure that can be consumed by the application
@@ -134,7 +132,7 @@ class HDF5_2_PNG(BaseData):
             pbar.update(1)
 
 
-class FormatProvidedDatasetSplits(BaseData):
+class FormatProvidedDatasetSplits(PCamSubDataset):
     """
     * Processes the train, valid and test datasets provided by PatchCamelyon and formatted
       by HDF5_2_PNG.
@@ -179,7 +177,7 @@ class BasePrepareDataset(BachBasePrepareDataset):
     Creates minipatches for each PNG file at settings.TRAIN_SPLIT_FILENAME,
     settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME; and saves them at
     settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME,
-    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
+    settings.TEST_FOLDER_NAME folders respectively. Also creates the labels file
     for each train, valid and test folder.
 
     Usage:
@@ -250,3 +248,48 @@ class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     Usage:
         WholeImage()()
     """
+
+
+class PCamTorchDataset(BaseDataset):
+    """  """
+
+    def __init__(self, subset, **kwargs):
+        """
+        Loads the subdataset
+
+        Args:
+           filename_pattern (str): filename with .json extension used to create the codes
+                                   when the calling the create_datasets_for_LC_KSVD method.
+           code_type   (CodeType): Code type used. See constants.constants.CodeType class defition
+        """
+        assert subset in PCamSubDataset.SUB_DATASETS
+        self.subset = subset
+        filename_pattern = kwargs.get('filename_pattern')
+        assert isinstance(filename_pattern, str)
+
+        code_type = kwargs.get('code_type')
+        cleaned_filename = clean_json_filename(filename_pattern)
+        name, extension = get_filename_and_extension(cleaned_filename)
+        file_name = '{}_{}.{}'.format(name, subset, extension)
+        self.data = load_codes(file_name, type_=code_type)
+        self.data['labels'] = LabelMatrixManager.get_1d_array_from_2d_matrix(self.data['labels'])
+
+    def __len__(self):
+        """
+        Returns:
+            dataset size (int)
+        """
+        return self.data['labels'].shape[0]
+
+    def __getitem__(self, idx):
+        """
+        Returns:
+            dict(feats=..., label=...)
+        """
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        return dict(
+            feats=torch.from_numpy(self.data['codes'][:, idx].ravel()).float(),
+            label=self.data['labels'][idx]
+        )

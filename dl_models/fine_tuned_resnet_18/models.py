@@ -45,6 +45,7 @@ class TransferLearningResnet18(TransformsMixins):
         model.visualize_model()
         model2.test()
     """
+    # TODO: replace it with gtorch_utils.constants.DB
     # TODO: Create unit tests with a very small dataset
     TRAIN = 'train'
     # VALIDATION = 'validation'
@@ -64,7 +65,8 @@ class TransferLearningResnet18(TransformsMixins):
             device  (torch.device): device were model will executed
             fine_tune       (bool): whether perform fine-tuning or use the ConvNet as a fixed feature extractor
         """
-        self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
+        self.data_transforms = kwargs.get(
+            'data_transforms', self.get_default_data_transforms(torch_pretrained=True))
         assert isinstance(self.data_transforms, dict)
         self.device = kwargs.get('device', torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
         assert isinstance(self.device, torch.device)
@@ -157,6 +159,9 @@ class TransferLearningResnet18(TransformsMixins):
         Args:
             filename (str): filename with '.pt' extension
         """
+        if not os.path.isdir(settings.MODEL_SAVE_FOLDER):
+            os.makedirs(settings.MODEL_SAVE_FOLDER)
+
         assert isinstance(filename, str)
         assert filename.endswith('.pt')
 

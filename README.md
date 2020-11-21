@@ -75,6 +75,10 @@ from utils.datasets.bach import plot_n_first_json_images
 ``` python
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
+# download and save the pre-trained resnet 18
+model = TransferLearningResnet18(fine_tune=False)
+model.save('resnet18_feature_extractor.pt')
+
 # example 1: Train a resnet18 using fine tuning
 model = TransferLearningResnet18(fine_tune=True)
 model.training_data_plot_grid()
@@ -97,9 +101,13 @@ If your images are big, you should consider using `RescaleResize` and/or `MiniPa
 to reduce their dimensionality. Thus, you will avoid issues with memory.
 ``` python
 from utils.datasets.bach import RawImages
-from constants.constants import ProcessImageOption, Label
+from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
 
-ri = RawImages(process_method=ProcessImageOption.MEAN, label_class=Label)
+# for Bach
+ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=SubDataset)
+# for PatchCamelyon
+ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+
 data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
@@ -107,9 +115,13 @@ data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 #### Random Faces feature descriptors
 ``` python
 from utils.datasets.bach import RandomFaces
-from constants.constants import ProcessImageOption, Label
+from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
 
-randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label)
+# for bach
+randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label, sub_datasets=SubDataset)
+# PatchCamelyon
+randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.CONCATENATE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+
 data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters

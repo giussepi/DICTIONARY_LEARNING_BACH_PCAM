@@ -70,6 +70,24 @@ class PCamLabel:
         return ', '.join(tuple('{} : {}'.format(*item) for item in cls.CHOICES))
 
 
+class SubDataset:
+    # TODO: replace it with gtorch_utils.constants.DB
+    """ Holds basic subdatset names  """
+    TRAIN = 'train'
+    TEST = 'test'
+
+    SUB_DATASETS = [TRAIN, TEST]
+
+
+class PCamSubDataset:
+    """ Holds PatchCamelyon subdatset names  """
+    TRAIN = 'train'
+    VALIDATION = 'valid'
+    TEST = 'test'
+
+    SUB_DATASETS = [TRAIN, VALIDATION, TEST]
+
+
 class CodeType:
     """ Holds the types of codes available  """
     RAW = LabelItem(0, 'Raw data')
