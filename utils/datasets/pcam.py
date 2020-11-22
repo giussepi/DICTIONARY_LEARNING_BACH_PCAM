@@ -183,31 +183,31 @@ class BasePrepareDataset(BachBasePrepareDataset):
     Usage:
         MiniPatch()()
     """
+    # TODO: Test if this still work after commenting these lines... it should...
+    # def __init__(self, *args, **kwargs):
+    #     """
+    #     * Initializes the object
+    #     * Cleans the train and ouput folders (performs delete and create operations)
+    #     """
+    #     super().__init__(*args, **kwargs)
+    #     clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.VALID_FOLDER_NAME))
+    #     self.split_files = [settings.TRAIN_SPLIT_FILENAME, settings.VALID_SPLIT_FILENAME,
+    #                         settings.TEST_SPLIT_FILENAME]
+    #     self.folder_names = [settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME,
+    #                          settings.TEST_FOLDER_NAME]
 
-    def __init__(self, *args, **kwargs):
-        """
-        * Initializes the object
-        * Cleans the train and ouput folders (performs delete and create operations)
-        """
-        super().__init__(*args, **kwargs)
-        clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.VALID_FOLDER_NAME))
-        self.split_files = [settings.TRAIN_SPLIT_FILENAME, settings.VALID_SPLIT_FILENAME,
-                            settings.TEST_SPLIT_FILENAME]
-        self.folder_names = [settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME,
-                             settings.TEST_FOLDER_NAME]
+    # def _load_image_list(self):
+    #     """
+    #     Loads the train test json files, creates the paths to the TIFF images into a list, and
+    #     assings the list to self.image_list.
+    #     """
+    #     super()._load_image_list()
 
-    def _load_image_list(self):
-        """
-        Loads the train test json files, creates the paths to the TIFF images into a list, and
-        assings the list to self.image_list.
-        """
-        super()._load_image_list()
-
-        for filename, label in self.read_split_file(settings.VALID_SPLIT_FILENAME):
-            self.image_list.append((
-                os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
-                settings.VALID_FOLDER_NAME
-            ))
+    #     for filename, label in self.read_split_file(settings.VALID_SPLIT_FILENAME):
+    #         self.image_list.append((
+    #             os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
+    #             settings.VALID_FOLDER_NAME
+    #         ))
 
     def _create_labels(self):
         """
