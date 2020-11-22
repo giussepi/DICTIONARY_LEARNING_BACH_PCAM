@@ -271,9 +271,10 @@ class BasePrepareDataset:
 
 class MiniPatch(BasePrepareDataset):
     """
-    Creates minipatches for each TIFF file at settings.TRAIN_SPLIT_FILENAME and
-    settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    Creates minipatches for each TIFF file at settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME and saves them at
+    settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME and
+    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
     for each train and test folder.
 
     Usage:
