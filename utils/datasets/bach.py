@@ -114,10 +114,10 @@ class RescaleResize:
 
 class BasePrepareDataset:
     """
-    Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME
-    and settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME directories respectively. Also for creates the labels file
-    for each train and test directory.
+    Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME, and settings.TEST_SPLIT_FILENAME files, and saves them at
+    settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME and settings.TEST_FOLDER_NAME
+    directories respectively. Also for creates the labels file for each train and test directory.
 
     Use it as a base class to create your own ROI JSON files. Just make sure you override the
     _create_json_files method.
@@ -133,13 +133,16 @@ class BasePrepareDataset:
     def __init__(self, *args, **kwargs):
         """
         * Initializes the object
-        * Cleans the train and ouput folders (performs delete and create operations)
+        * Cleans the train, validation and test output folders (performs delete and create operations)
         """
         self.image_list = None
-        self.split_files = [settings.TRAIN_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
-        self.folder_names = [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]
-        clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME))
-        clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.TEST_FOLDER_NAME))
+        self.split_files = [
+            settings.TRAIN_SPLIT_FILENAME, settings.VALID_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
+        self.folder_names = [
+            settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME, settings.TEST_FOLDER_NAME]
+
+        for folder in self.folder_names:
+            clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, folder))
 
     def __call__(self):
         """ Functor call """
@@ -160,22 +163,17 @@ class BasePrepareDataset:
 
     def _load_image_list(self):
         """
-        Loads the train test json files, creates the paths to the TIFF images into a list, and
-        assings the list to self.image_list.
+        Loads the train, validation, test json files, creates the paths to the TIFF images
+        into a list, and assings the list to self.image_list.
         """
         self.image_list = []
 
-        for filename, label in self.read_split_file(settings.TRAIN_SPLIT_FILENAME):
-            self.image_list.append((
-                os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
-                settings.TRAIN_FOLDER_NAME
-            ))
-
-        for filename, label in self.read_split_file(settings.TEST_SPLIT_FILENAME):
-            self.image_list.append((
-                os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
-                settings.TEST_FOLDER_NAME
-            ))
+        for split_filename, split_folder_name in zip(self.split_files, self.folder_names):
+            for filename, label in self.read_split_file(split_filename):
+                self.image_list.append((
+                    os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
+                    split_folder_name
+                ))
 
     def _create_image_json_file(self, filename, folder, source_filename, x, y, xmax, ymax):
         """
@@ -337,10 +335,10 @@ class MiniPatch(BasePrepareDataset):
 
 class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     """
-    Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME and
-    settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
-    for each train and test folder.
+    Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME files, and saves them
+    at settings.TRAIN_FOLDER_NAME and settings.TEST_FOLDER_NAME folders respectively.
+    Also for creates the labels file for each train and test folder.
 
     Use it to work with the whole images instead of patches.
 
