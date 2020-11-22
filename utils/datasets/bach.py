@@ -15,11 +15,11 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import torch
+from gutils.datasets.utils import TrainValTestSplit
 from PIL import Image
 from skimage.color import rgb2gray
 from skimage.transform import rescale, resize
-from sklearn.model_selection import train_test_split
-import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
@@ -351,20 +351,23 @@ class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
 
 class TrainTestSplit:
     """
-    Splits the dataset into train and test and saves them in CSV files
+    Splits the dataset into train, validation and test and saves them in CSV files
 
     Args:
         test_size   (float): test dataset size in range [0, 1]
+        val_size    (float): validation dataset size in range [0, 1]
 
     Usage:
-        TrainTestSplit(test_size=0.2)()
+        TrainTestSplit()()
     """
 
     def __init__(self, *args, **kwargs):
         """ Initializes the instance """
         self.test_size = kwargs.get('test_size', settings.TEST_SIZE)
+        self.val_size = kwargs.get('val_size', settings.VAL_SIZE)
         assert isinstance(self.test_size, (float, int))
-        self.train_xy = self.test_xy = None
+        assert isinstance(self.val_size, (float, int))
+        self.train_xy = self.val_xy = self.test_xy = None
 
     def __call__(self):
         """
@@ -383,29 +386,39 @@ class TrainTestSplit:
                 settings.TRAIN_PHOTOS_GROUND_TRUTH, delimiter=',', dtype=np.str)
             pbar.update(1)
 
-        print("Splitting dataset with test = {}".format(self.test_size))
+        print("Splitting dataset with test = {} & val = {}".format(self.test_size, self.val_size))
+
         with tqdm(total=1) as pbar:
-            x_train, x_test, y_train, y_test = train_test_split(
-                ground_truth[:, 0], ground_truth[:, 1], test_size=self.test_size,
-                random_state=settings.RANDOM_STATE, stratify=ground_truth[:, 1]
-            )
+            x_train, x_val, x_test, y_train, y_val, y_test = TrainValTestSplit(
+                ground_truth[:, 0], ground_truth[:, 1], val_size=self.val_size,
+                test_size=self.test_size, random_state=settings.RANDOM_STATE,
+                shuffle=True, stratify=ground_truth[:, 1]
+            )()
+
             self.train_xy = np.hstack((
                 np.expand_dims(x_train, axis=1), np.expand_dims(y_train, axis=1)))
+            self.val_xy = np.hstack((
+                np.expand_dims(x_val, axis=1), np.expand_dims(y_val, axis=1)))
             self.test_xy = np.hstack((
                 np.expand_dims(x_test, axis=1), np.expand_dims(y_test, axis=1)))
             pbar.update(1)
 
     def __create_json_files(self):
-        """ Saves train and test datasets into JSON files """
-        print("Saving train/test datset into JSON files...")
+        """ Saves train, validation and test datasets into JSON files """
+        print("Saving train/validation/test dataset into JSON files...")
 
-        file_paths = [os.path.join(settings.OUTPUT_FOLDER, filename)
-                      for filename in [settings.TRAIN_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]]
+        file_paths = [
+            os.path.join(settings.OUTPUT_FOLDER, filename)
+            for filename in [
+                settings.TRAIN_SPLIT_FILENAME,
+                settings.VALID_SPLIT_FILENAME,
+                settings.TEST_SPLIT_FILENAME
+            ]
+        ]
 
         clean_create_folder(settings.OUTPUT_FOLDER)
 
-        for file_path in tqdm(file_paths):
-            data = self.train_xy if file_path.endswith(settings.TRAIN_SPLIT_FILENAME) else self.test_xy
+        for file_path, data in tqdm(zip(file_paths, (self.train_xy, self.val_xy, self.test_xy))):
             with open(file_path, 'w') as file_:
                 # Workaround to save numpy array without errors
                 json.dump(data.tolist(), file_)
