@@ -16,7 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
-from gutils.datasets.utils import TrainValTestSplit
+from gutils.datasets.utils import TrainValTestSplit as gutils_TrainValTestSplit
 from PIL import Image
 from skimage.color import rgb2gray
 from skimage.transform import rescale, resize
@@ -349,7 +349,7 @@ class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     """
 
 
-class TrainTestSplit:
+class TrainValTestSplit:
     """
     Splits the dataset into train, validation and test and saves them in CSV files
 
@@ -358,7 +358,7 @@ class TrainTestSplit:
         val_size    (float): validation dataset size in range [0, 1]
 
     Usage:
-        TrainTestSplit()()
+        TrainValTestSplit()()
     """
 
     def __init__(self, *args, **kwargs):
@@ -389,7 +389,7 @@ class TrainTestSplit:
         print("Splitting dataset with test = {} & val = {}".format(self.test_size, self.val_size))
 
         with tqdm(total=1) as pbar:
-            x_train, x_val, x_test, y_train, y_val, y_test = TrainValTestSplit(
+            x_train, x_val, x_test, y_train, y_val, y_test = gutils_TrainValTestSplit(
                 ground_truth[:, 0], ground_truth[:, 1], val_size=self.val_size,
                 test_size=self.test_size, random_state=settings.RANDOM_STATE,
                 shuffle=True, stratify=ground_truth[:, 1]

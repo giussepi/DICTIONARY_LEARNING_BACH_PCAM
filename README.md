@@ -36,12 +36,12 @@ RescaleResize((100, 100, 3))()  # resizes to (100, 100, 3)
 
 Don't forget to update the path of `settings.TRAIN_PHOTOS_DATASET`
 
-### Create Train/Test split
+### Create Train/Validation/Test split
 ```python
-from utils.datasets.bach import TrainTestSplit
+from utils.datasets.bach import TrainValTestSplit
 
 # BACH only
-TrainTestSplit()()
+TrainValTestSplit()()
 ```
 	Note: See class definition to pass the correct parameters
 
