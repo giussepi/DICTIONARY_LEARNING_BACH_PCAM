@@ -6,7 +6,7 @@ from torchvision import transforms
 from gtorch_utils.constants import DB
 
 from dl_models.fine_tuned_resnet_18 import constants as local_constants
-from constants.constants import PCamSubDataset, SubDataset
+from constants.constants import PCamSubDataset
 
 
 class TransformsMixins:

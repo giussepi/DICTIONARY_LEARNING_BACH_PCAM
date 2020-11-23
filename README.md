@@ -34,7 +34,12 @@ RescaleResize((100, 100, 3))()  # resizes to (100, 100, 3)
 ```
 	Note: See class definition to pass the correct parameters
 
-Don't forget to update the path of `settings.TRAIN_PHOTOS_DATASET`
+Don't forget to update the path of `settings.TRAIN_PHOTOS_DATASET`. E.g.: If you resized to .25 then
+you have to update your settings like this:
+
+``` python
+TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos_0.25')
+```
 
 ### Create Train/Validation/Test split
 ```python
@@ -103,29 +108,36 @@ model2.test()
 If your images are big, you should consider using `RescaleResize` and/or `MiniPatch` classes
 to reduce their dimensionality. Thus, you will avoid issues with memory.
 ``` python
+from gtorch_utils.constants import DB
 from utils.datasets.bach import RawImages
-from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
+from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
 
 # for Bach
-ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=SubDataset)
+ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
 # for PatchCamelyon
 ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
 
-data = ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
 #### Random Faces feature descriptors
 ``` python
+from gtorch_utils.constants import DB
 from utils.datasets.bach import RandomFaces
-from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
+from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
 
 # for bach
-randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label, sub_datasets=SubDataset)
+# Requires all images to have the same width & height so without applying RescaleResize execute the
+# TrainValTestSplit()(), then in the settings make sure CUT_SIZE = 512; finally, create minipatches
+# MiniPatch()(). Now you'll be able to apply the RandomFaces feature extractor. (of course you can
+# change the 512 value, preferably choose a multiple of 32)
+randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
 # PatchCamelyon
-randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.CONCATENATE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+# if you ran HDF5_2_PNG with only_center=True then the images are 32x32, otherwise they will be 96x96
+randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
 
-data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 

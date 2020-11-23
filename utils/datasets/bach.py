@@ -16,6 +16,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import torch
+from gtorch_utils.constants import DB
 from gutils.datasets.utils import TrainValTestSplit as gutils_TrainValTestSplit
 from PIL import Image
 from skimage.color import rgb2gray
@@ -24,7 +25,7 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import settings
-from constants.constants import Label, ProcessImageOption, PCamSubDataset, SubDataset
+from constants.constants import Label, ProcessImageOption
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 from utils.datasets.mixins import CreateJSONFilesMixin
@@ -474,7 +475,7 @@ class BaseDatasetCreator(TransformsMixins):
             process_method  (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
             label_class          (type): Label class (see constants/constants.py)
             sub_datasets (object class): Class holding subdataset information.
-                                         See constants.constants.SubDataset class
+                                         See constants.constants.PCamSubDataset and gtorch_utils.constants.DB
         """
         # TODO: verify the torch data adjustment is not necessary here
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
@@ -482,7 +483,7 @@ class BaseDatasetCreator(TransformsMixins):
         assert isinstance(self.label_class, type)
         self.codes_folder = kwargs.get('codes_folder', '')
         self.process_method = kwargs.get('process_method', ProcessImageOption.MEAN)
-        sub_datasets = kwargs.get('sub_datasets', SubDataset)
+        sub_datasets = kwargs.get('sub_datasets', DB)
         assert isinstance(self.data_transforms, dict)
         assert isinstance(self.codes_folder, str)
         assert self.codes_folder != ''
@@ -608,11 +609,12 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
+        from gtorch_utils.constants import DB
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
 
         # for BACH
         ri = RawImages(
-            process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=SubDataset)
+            process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
         # for PatchCamelyon
         ri = RawImages(
             process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
@@ -658,14 +660,15 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset, SubDataset
+        from gtorch_utils.constants import DB
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
 
         # for BACH
-        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE, label_class=Label, sub_datasets=SubDataset)
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
         # for PatchCamelyon
-        randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.CONCATENATE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+        randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
 
-        randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+        randfaces.create_datasets_for_LC_KSVD('randfaces_dataset.json')
     """
 
     def __init__(self, *args, **kwargs):
