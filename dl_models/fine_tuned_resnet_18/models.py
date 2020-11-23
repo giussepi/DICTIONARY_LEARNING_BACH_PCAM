@@ -317,7 +317,7 @@ class TransferLearningResnet18(DB, TransformsMixins):
             filename           (str): Filename with .json extension
 
         Returns:
-            {'<sub_dataset>': [cnn codes list of lists, labels list]}
+            {'<sub_dataset>': [codes list of lists, labels list]}
 
         """
         assert sub_dataset in self.SUB_DATASETS
@@ -337,7 +337,7 @@ class TransferLearningResnet18(DB, TransformsMixins):
 
         # Workaround to serialize numpy arrays as JSON
         formatted_data = {
-            'cnn_codes': formatted_cnn_codes.tolist(),
+            'codes': formatted_cnn_codes.tolist(),
             'labels': formatted_labels.tolist()
         }
 
