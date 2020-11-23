@@ -6,7 +6,6 @@ from __future__ import print_function, division
 import copy
 import json
 import os
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
