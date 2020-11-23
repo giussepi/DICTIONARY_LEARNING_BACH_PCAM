@@ -170,8 +170,8 @@ test = load_cnn_codes('attempt3_test.json')
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
 Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
-D, X, T, W = lcksvd.labelconsistentksvd1(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T)
-predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+D, X, T, W = lcksvd.labelconsistentksvd1(train['codes'], Dinit, train['labels'], Q, Tinit_T)
+predictions, gamma = lcksvd.classification(D, W, test['codes'])
 print('\nFinal recognition rate for LC-KSVD1 is : {0:.4f}'.format(
     accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
 
@@ -193,8 +193,8 @@ test = load_cnn_codes('attempt3_test.json')
 lcksvd = DKSVD(dictsize=570, timeit=True)
  Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
 
-D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
-predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+predictions, gamma = lcksvd.classification(D, W, test['codes'])
 print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
     accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
 ```
@@ -213,7 +213,7 @@ test = load_cnn_codes('attempt3_test.json')
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
 Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
-predictions, gamma = lcksvd.classification(Dinit, Winit, train['cnn_codes'])
+predictions, gamma = lcksvd.classification(Dinit, Winit, train['codes'])
 print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
     accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
 ```
@@ -237,8 +237,8 @@ test = load_cnn_codes('attempt3_test.json')
 lcksvd = DKSVD(dictsize=570, timeit=True)
  Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
 
-D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
-predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+predictions, gamma = lcksvd.classification(D, W, test['codes'])
 
 LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=Label.INDEX, custom_colours=COLOURS)(simple='')
 
@@ -262,8 +262,8 @@ test = load_cnn_codes('attempt3_test.json')
 lcksvd = DKSVD(dictsize=570, timeit=True)
  Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
 
-D, X, T, W = lcksvd.labelconsistentksvd2(train['cnn_codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
-predictions, gamma = lcksvd.classification(D, W, test['cnn_codes'])
+D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+predictions, gamma = lcksvd.classification(D, W, test['codes'])
 
 AtomsPlotter(dictionary=D, img_width=128, img_height=96, n_rows=10, n_cols=16)()
 ```
