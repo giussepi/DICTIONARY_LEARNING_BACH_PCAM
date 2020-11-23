@@ -396,7 +396,7 @@ class TransferLearningResnet18(DB, TransformsMixins):
 
         Usage:
             model = TransferLearningResnet18(fine_tune=True)
-            model.load('weights/resnet18_fine_tuned.pt')
+            model.load('fine_tuned_resnet18.pt')
             model.create_datasets_for_LC_KSVD('my_dataset.json')
         """
         all_cnn_codes = self.get_all_CNN_codes()

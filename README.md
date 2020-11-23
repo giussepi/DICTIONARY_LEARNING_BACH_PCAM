@@ -86,7 +86,7 @@ model.save('resnet18_feature_extractor.pt')
 model = TransferLearningResnet18(fine_tune=True)
 model.training_data_plot_grid()
 model.train(num_epochs=25)
-model.save('fine_tunned_resnet18.pt')
+model.save('fine_tuned_resnet18.pt')
 model.visualize_model()
 model.test()
 
@@ -135,7 +135,7 @@ data = randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
 model = TransferLearningResnet18(fine_tune=True)
-model.load('weights/resnet18_fine_tuned.pt')
+model.load('fine_tuned_resnet18.pt')
 model.create_datasets_for_LC_KSVD('mydataset.json')
 ```
 	Note: See function definition to pass the correct parameters
