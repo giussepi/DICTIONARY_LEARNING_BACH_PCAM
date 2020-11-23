@@ -86,13 +86,13 @@ model.save('resnet18_feature_extractor.pt')
 model = TransferLearningResnet18(fine_tune=True)
 model.training_data_plot_grid()
 model.train(num_epochs=25)
-model.save('mymodel.pt')
+model.save('fine_tunned_resnet18.pt')
 model.visualize_model()
 model.test()
 
 # example 2: Load a resnet18 as a fixed feature extractor
 model2 = TransferLearningResnet18(fine_tune=False)
-model2.load('weights/resnet18_feature_extractor.pt')
+model2.load('resnet18_feature_extractor.pt')
 model2.visualize_model()
 model2.test()
 ```

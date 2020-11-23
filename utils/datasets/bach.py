@@ -729,6 +729,8 @@ def read_roi_image(file_path):
             data['roi']['y']:data['roi']['y']+data['roi']['h'],
             data['roi']['x']:data['roi']['x']+data['roi']['w'],
         ]
+        if not image.flags['WRITEABLE']:
+            image = image.copy()
 
     return image
 

@@ -80,7 +80,12 @@ class SubDataset:
 
 
 class PCamSubDataset:
-    """ Holds PatchCamelyon subdatset names  """
+    """
+    Holds PatchCamelyon subdatset names
+
+    NOTE: we created this class just because PatchCamelyon VALIDATION uses a key
+          fifferent than 'val'
+    """
     TRAIN = 'train'
     VALIDATION = 'valid'
     TEST = 'test'

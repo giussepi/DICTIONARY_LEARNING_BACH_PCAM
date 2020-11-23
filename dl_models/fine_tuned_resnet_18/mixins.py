@@ -3,8 +3,9 @@
 
 from torchvision import transforms
 
-from dl_models.fine_tuned_resnet_18 import constants as local_constants
+from gtorch_utils.constants import DB
 
+from dl_models.fine_tuned_resnet_18 import constants as local_constants
 from constants.constants import PCamSubDataset, SubDataset
 
 
@@ -43,6 +44,5 @@ class TransformsMixins:
             PCamSubDataset.TRAIN: transforms.Compose(train_transforms),
             PCamSubDataset.VALIDATION: transforms.Compose(test_val_transforms),
             PCamSubDataset.TEST: transforms.Compose(test_val_transforms),
-            # SubDataset.VALIDATION = transforms.Compose(test_val_transforms),
-            # TODO: uncomment this line when adding validation data to BACH
+            DB.VALIDATION: transforms.Compose(test_val_transforms),
         }
