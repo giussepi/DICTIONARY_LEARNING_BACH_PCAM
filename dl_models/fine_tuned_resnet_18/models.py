@@ -282,7 +282,7 @@ class TransferLearningResnet18(DB, TransformsMixins):
 
         for data in tqdm(self.dataloaders[sub_dataset]):
             inputs = data['image'].to(self.device)
-            all_labels.append(data['target'])
+            all_labels.append(copy.deepcopy(data['target']))
 
             with torch.no_grad():
                 self.model(inputs)
