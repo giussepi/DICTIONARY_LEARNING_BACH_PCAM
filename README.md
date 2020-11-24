@@ -1,8 +1,6 @@
-# BACH_ICIAR_2018
+# Dictionary Learning Tests
 
-Attempt to improve classification results on
-[ICIAR 2018 Grand Challenge on Breast Cancer Histology images](https://iciar2018-challenge.grand-challenge.org/Dataset/) by using Dictionary Learning techniques.
-
+Testing dictionary learning techniques vs perceptron and MLP using BACH and PatchCamelyon datasets.
 
 ## Installation
 
@@ -19,6 +17,10 @@ Attempt to improve classification results on
 	  `$ cp settings.py.template settings.py`
 
 
+## BACH_ICIAR_2018
+
+[ICIAR 2018 Grand Challenge on Breast Cancer Histology images](https://iciar2018-challenge.grand-challenge.org/Dataset/).
+
 ## Usage
 
 ### Transform Dataset
@@ -29,16 +31,16 @@ Attempt to improve classification results on
 from utils.datasets.bach import RescaleResize
 
 # BACH only
-RescaleResize(.25)()  # rescales using .25 scaling factor
+RescaleResize(.0625)()  # rescales using .0625 scaling factor
 RescaleResize((100, 100, 3))()  # resizes to (100, 100, 3)
 ```
 	Note: See class definition to pass the correct parameters
 
-Don't forget to update the path of `settings.TRAIN_PHOTOS_DATASET`. E.g.: If you resized to .25 then
+**Don't forget to update the path of settings.TRAIN_PHOTOS_DATASET**. E.g.: If you resized to .0625 then
 you have to update your settings like this:
 
 ``` python
-TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos_0.25')
+TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos_0.0625')
 ```
 
 ### Create Train/Validation/Test split
@@ -55,6 +57,7 @@ TrainValTestSplit()()
 ```python
 from utils.datasets.bach import WholeImage
 
+# BACH only
 WholeImage()()
 ```
 	Note: See class definition to pass the correct parameters
@@ -63,19 +66,20 @@ WholeImage()()
 ```python
 from utils.datasets.bach import MiniPatch
 
+# BACH only
 MiniPatch()()
 ```
 	Note: See class definition to pass the correct parameters
 
-### Plot/Save images from json image minipatches
+### Plot/Save images from json images
 ```python
 import os
 
 import settings
 from utils.datasets.bach import plot_n_first_json_images
 
-    plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
-                             (9, 9), carousel=True, remove_axes=False, dpi=100)
+plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
+                        (9, 9), carousel=True, remove_axes=False, dpi=100)
 ```
 	Note: See function definition to pass the correct parameters
 
@@ -127,7 +131,7 @@ from gtorch_utils.constants import DB
 from utils.datasets.bach import RandomFaces
 from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
 
-# for bach
+# BACH
 # Requires all images to have the same width & height so without applying RescaleResize execute the
 # TrainValTestSplit()(), then in the settings make sure CUT_SIZE = 512; finally, create minipatches
 # MiniPatch()(). Now you'll be able to apply the RandomFaces feature extractor. (of course you can
@@ -137,7 +141,7 @@ randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessIma
 # if you ran HDF5_2_PNG with only_center=True then the images are 32x32, otherwise they will be 96x96
 randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
 
-randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+randfaces.create_datasets_for_LC_KSVD('my_randface_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
@@ -148,7 +152,7 @@ from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
 model = TransferLearningResnet18(fine_tune=True)
 model.load('fine_tuned_resnet18.pt')
-model.create_datasets_for_LC_KSVD('mydataset.json')
+model.create_datasets_for_LC_KSVD('my_cnn_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
@@ -158,27 +162,32 @@ from utils.utils import load_codes
 from constants.constants import CodeType
 
 # Choose the right code type based on constants.constants.CodeType
-test = load_codes('mydataset_test.json', type_=CodeType.CNN)
-test['codes'].shape  # (512, 2100)
-test['labels'].shape  # (4, 2100)
+test = load_codes(''my_cnn_dataset_test.json', type_=CodeType.CNN)
+print(test['codes'].shape)
+print(test['labels'].shape)
 
-train = load_codes('attempt2_train.json', type_=CodeType.CNN)
-train['codes'].shape  # (512, 11900)
-train['labels'].shape  # (4, 11900)
+train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
+print(train['codes'].shape)
+print(train['labels'].shape)
+
+val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
+print(val['codes'].shape)
+print(val['labels'].shape)
 ```
 	Note: See function definition to pass the correct parameters
 
 ### Run LC-KSVD1
 ```python
 import numpy as np
+from lc_ksvd.dksvd import DKSVD
 from sklearn.metrics import accuracy_score
 
-from lc_ksvd.dksvd import DKSVD
-from utils.utils import load_cnn_codes
+from constants.constants import CodeType
+from utils.utils import load_codes
 
-
-train = load_cnn_codes('attempt3_train.json')
-test = load_cnn_codes('attempt3_test.json')
+train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
+val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
+test = load_codes(''my_cnn_dataset_test.json', type_=CodeType.CNN)
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
 Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
@@ -193,14 +202,15 @@ print('\nFinal recognition rate for LC-KSVD1 is : {0:.4f}'.format(
 ### Run LC-KSVD2
 ```python
 import numpy as np
+from lc_ksvd.dksvd import DKSVD
 from sklearn.metrics import accuracy_score
 
-from lc_ksvd.dksvd import DKSVD
+from constants.constants import CodeType
 from utils.utils import load_cnn_codes
 
-
-train = load_cnn_codes('attempt3_train.json')
-test = load_cnn_codes('attempt3_test.json')
+train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
+val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
+test = load_codes(''my_cnn_dataset_test.json', type_=CodeType.CNN)
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
  Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
@@ -215,13 +225,15 @@ print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
 ### Run D-KSVD
 ```python
 import numpy as np
+from lc_ksvd.dksvd import DKSVD
 from sklearn.metrics import accuracy_score
 
-from lc_ksvd.dksvd import DKSVD
+from constants.constants import CodeType
 from utils.utils import load_cnn_codes
 
-train = load_cnn_codes('attempt3_train.json')
-test = load_cnn_codes('attempt3_test.json')
+train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
+val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
+test = load_codes(''my_cnn_dataset_test.json', type_=CodeType.CNN)
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
 Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
@@ -235,16 +247,16 @@ print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
 #### Visualize learned representations
 ``` python
 import numpy as np
-
-from constants.constants import Label, COLOURS
 from lc_ksvd.constants import PlotFilter
 from lc_ksvd.dksvd import DKSVD
 from lc_ksvd.utils.plot_tools import LearnedRepresentationPlotter
+
+from constants.constants import Label, COLOURS, CodeType
 from utils.utils import load_cnn_codes
 
-
-train = load_cnn_codes('attempt3_train.json')
-test = load_cnn_codes('attempt3_test.json')
+train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
+val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
+test = load_codes(''my_cnn_dataset_test.json', type_=CodeType.CNN)
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
  Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
@@ -265,11 +277,13 @@ LearnedRepresentationPlotter(predictions=predictions, gamma=gamma, label_index=L
 ``` python
 from lc_ksvd.dksvd import DKSVD
 from lc_ksvd.utils.plot_tools import AtomsPlotter
+
+from constants.constants import Label, COLOURS, CodeType
 from utils.utils import load_cnn_codes
 
-
-train = load_cnn_codes('attempt3_train.json')
-test = load_cnn_codes('attempt3_test.json')
+train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
+val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
+test = load_codes(''my_cnn_dataset_test.json', type_=CodeType.CNN)
 
 lcksvd = DKSVD(dictsize=570, timeit=True)
  Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
@@ -282,6 +296,42 @@ AtomsPlotter(dictionary=D, img_width=128, img_height=96, n_rows=10, n_cols=16)()
 	Note: See class definition to pass the correct parameters
 
 
-## Committing changes made on third-party repositories
+## PatchCamelyon (PCam)
 
-   All changes made on any third-party repository from `dl_algorithms` directory must committed and pushed to each repository manually. Because, this application is not keeping track of any of them.
+[PatchCamelyon (PCam) deep learning classification benchmark](https://github.com/basveeling/pcam)
+
+Once you downloaded and updated your settings file properly you have to adapt/format the PCam dataset. Then,
+you can use any of tools defined after the BACH sub-section Plot/Save images
+from json images (including it).
+
+### Adapt/format dataset
+
+1. HDF5 to PNG
+
+	Update the path of `settings.BASE_DATASET_LINK` before running it.
+	Set `settings.TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'images')` before running it.
+
+	``` python
+	from utils.datasets.pcam HDF5_2_PNG
+
+	HDF5_2_PNG(only_center=True)()
+	```
+
+2. Format split dataset provided by PatchCamelyon
+
+	Set `settings.TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'images')` before running it.
+
+	``` python
+	from utils.datasets.pcam FormatProvidedDatasetSplits
+
+	FormatProvidedDatasetSplits()()
+	```
+
+3. Create ROI files
+
+   Using whole images
+   ```python
+   from utils.datasets.pcam import WholeImage
+
+	WholeImage()()
+	```

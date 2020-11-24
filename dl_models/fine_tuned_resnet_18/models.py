@@ -42,7 +42,7 @@ class TransferLearningResnet18(DB, TransformsMixins):
         model.test()
 
         model2 = TransferLearningResnet18(fine_tune=True)
-        model2.load('resnet18_fine_tuned.pt')
+        model2.load('fine_tuned_resnet18.pt')
         model.visualize_model()
         model2.test()
     """

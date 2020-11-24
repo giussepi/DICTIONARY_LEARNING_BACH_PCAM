@@ -7,18 +7,22 @@ import os
 #                            General Configuration                            #
 ###############################################################################
 # path to the main dataset directory
-BASE_DATASET_LINK = os.path.join('datasets', 'ICIAR 2018 BACH challenge')
+BASE_DATASET_LINK = os.path.join('datasets', 'PatchCamelyon (PCam)')
+# BASE_DATASET_LINK = os.path.join('datasets', 'ICIAR 2018 BACH challenge')
 
 # path to the directory holding all the images grouped by labels in folders. e.g.
 # label1/<images labelled as label1>
 # label2/<images labelled as label2>
-TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos')
+TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'images')
+# TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos_0.0625')
+
 
 # path to CSV file with the images info. Each row should have:
 # <image name>.png,<label>
 # the image name should have the format:
 # <first letter of the label> + <id> + '.png'
-TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv')
+TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'full_ground_truth.csv')
+# TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv')
 
 # TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_TestDataset', 'Photos')
 
@@ -29,10 +33,10 @@ TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_groun
 OUTPUT_FOLDER = 'output'
 LABELS_FILENAME = 'labels.json'  # general name for labels file
 TRAIN_SPLIT_FILENAME = 'train.csv'  # original TIFF images
-VALID_SPLIT_FILENAME = 'valid.csv'
+VALID_SPLIT_FILENAME = 'val.csv'
 TEST_SPLIT_FILENAME = 'test.csv'  # original TIFF images
 TRAIN_FOLDER_NAME = 'train'  # for minipatches
-VALID_FOLDER_NAME = 'valid'
+VALID_FOLDER_NAME = 'val'
 TEST_FOLDER_NAME = 'test'  # for minipatches
 
 HOLDBACK = 0.7
@@ -42,7 +46,8 @@ OVERLAP_COEFFICIENT = 0.5
 # overlap must be an integer to avoid errors with the sliding window algorithm
 OVERLAP = int(OVERLAP_COEFFICIENT * CUT_SIZE)
 
-TEST_SIZE = .75  # 0.15
+TEST_SIZE = .65  # .75  # 0.15  # from the total
+VAL_SIZE = .10  # validation size  # from the total
 
 RANDOM_STATE = 42
 
@@ -55,8 +60,11 @@ FD_DIMENSION = 512  # dimension of random-face feature descriptor
 #                        dl_models.fine_tuned_resnet_18                       #
 ###############################################################################
 
-BATCH_SIZE = 32  # 4
-NUM_WORKERS = 12  # 4
+# BATCH_SIZE = 4  # BACH
+BATCH_SIZE = 32  # PatchCamelyon
+
+# NUM_WORKERS = 4  # BACH
+NUM_WORKERS = 12  # PatchCamelyon
 
 MODEL_SAVE_FOLDER = 'weights'
 CNN_CODES_FOLDER = 'cnn_codes'
