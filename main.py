@@ -16,7 +16,7 @@ import settings
 from constants.constants import CodeType, ProcessImageOption, PCamLabel, PCamSubDataset, Label
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainValTestSplit, \
-    RawImages, RandomFaces, WholeImage, RescaleResize
+    RawImages, RandomFaces, WholeImage, RescaleResize, BachTorchDataset
 from utils.datasets.pcam import WholeImage as PCamWholeImage, HDF5_2_PNG, FormatProvidedDatasetSplits, \
     PCamTorchDataset
 from utils.utils import load_codes
@@ -150,7 +150,15 @@ if __name__ == '__main__':
     ###########################################################################
     #                                 LC-KSVD1                                #
     ###########################################################################
-    # lcksvd = DKSVD(dictsize=570, timeit=True)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
+
+    # SPARSITYTHRES = 15
+    # lcksvd = DKSVD(
+    #     sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES,
+    #     sqrt_alpha=.0012, timeit=True
+    # )
     # Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
     # np.save('Dinit.npy', Dinit, False)
     # np.save('Tinit_T.npy', Tinit_T, False)
@@ -168,7 +176,15 @@ if __name__ == '__main__':
     ###########################################################################
     #                                 LC-KSVD2                                #
     ###########################################################################
-    # lcksvd = DKSVD(dictsize=30, timeit=True, iterations=1, iterations4ini=1)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
+
+    # SPARSITYTHRES = 15
+    # lcksvd = DKSVD(
+    #     sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES, timeit=True,
+    #     sqrt_alpha=.0012, sqrt_beta=.0012, tol=1e-6, iterations=50, iterations4ini=20
+    # )
     # Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
     # np.save('Dinit.npy', Dinit, False)
     # np.save('Tinit_T.npy', Tinit_T, False)
@@ -191,7 +207,15 @@ if __name__ == '__main__':
     ###########################################################################
     #                                  D-KSVD                                 #
     ###########################################################################
-    # lcksvd = DKSVD(dictsize=570, timeit=True)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
+
+    # SPARSITYTHRES = 15
+    # lcksvd = DKSVD(
+    #     sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES,
+    #     timeit=True
+    # )
     # Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
     # predictions, gamma = lcksvd.classification(Dinit, Winit, train['codes'])
     # print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
@@ -200,21 +224,23 @@ if __name__ == '__main__':
     ###########################################################################
     #                                Perceptron                               #
     ###########################################################################
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+
     # ModelMGR(
     #     cuda=True,
-    #     model=Perceptron(1024, 2),
-    #     sub_datasets=PCamSubDataset,
-    #     dataset=PCamTorchDataset,
+    #     model=Perceptron(test['codes'].shape[0], test['labels'].shape[0]),
+    #     sub_datasets=DB,  # PCamSubDataset
+    #     dataset=BachTorchDataset,  # PCamTorchDataset
     #     dataset_kwargs=dict(filename_pattern='my_raw_dataset.json', code_type=CodeType.RAW),
     #     batch_size=6,
     #     shuffe=False,
     #     num_workers=16,
     #     optimizer=optim.SGD,
-    #     optimizer_kwargs=dict(lr=1e-3, momentum=.9),
+    #     optimizer_kwargs=dict(lr=1e-5, momentum=.9),
     #     lr_scheduler=None,
     #     lr_scheduler_kwargs={},
-    #     epochs=200,
-    #     earlystopping_kwargs=dict(min_delta=1e-3, patience=5),
+    #     epochs=600,
+    #     earlystopping_kwargs=dict(min_delta=1e-5, patience=5),
     #     checkpoints=False,
     #     checkpoint_interval=5,
     #     checkpoint_path=OrderedDict(directory_path='tmp', filename=''),
@@ -225,22 +251,27 @@ if __name__ == '__main__':
     ###########################################################################
     #                          Multi-layer Perceptron                          #
     ###########################################################################
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+
     # ModelMGR(
     #     cuda=True,
-    #     model=MLP(1024, 1024, 2, dropout=.25, sigma=.1),
-    #     sub_datasets=PCamSubDataset,
-    #     dataset=PCamTorchDataset,
+    #     model=MLP(
+    #         test['codes'].shape[0], test['codes'].shape[0],
+    #         test['labels'].shape[0], dropout=.25, sigma=.1
+    #     ),
+    #     sub_datasets=DB,  # PCamSubDataset
+    #     dataset=BachTorchDataset,  # PCamTorchDataset
     #     dataset_kwargs=dict(filename_pattern='my_raw_dataset.json', code_type=CodeType.RAW),
     #     batch_size=6,
     #     shuffe=False,
     #     num_workers=16,
     #     optimizer=optim.SGD,
-    #     optimizer_kwargs=dict(lr=1e-3, momentum=.9),  # 1e-4
+    #     optimizer_kwargs=dict(lr=1e-4, momentum=.9),
     #     lr_scheduler=None,
     #     lr_scheduler_kwargs={},
     #     epochs=200,
-    #     earlystopping_kwargs=dict(min_delta=1e-3, patience=5),
-    #     checkpoints=True,
+    #     earlystopping_kwargs=dict(min_delta=1e-6, patience=10),
+    #     checkpoints=False,
     #     checkpoint_interval=5,
     #     checkpoint_path=OrderedDict(directory_path='tmp'),
     #     saving_details=OrderedDict(directory_path='tmp', filename='best_model.pth'),

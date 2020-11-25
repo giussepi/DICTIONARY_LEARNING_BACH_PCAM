@@ -28,6 +28,7 @@ import settings
 from constants.constants import Label, ProcessImageOption
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
+from utils.datasets.base import BaseTorchDataset
 from utils.datasets.mixins import CreateJSONFilesMixin
 from utils.files import get_name_and_extension
 from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
@@ -268,6 +269,13 @@ class BasePrepareDataset:
 
             with open(file_path, 'w') as file_:
                 json.dump(dict(zip(filenames, labels)), file_)
+
+
+class BachTorchDataset(BaseTorchDataset):
+    """ BACH torch dataset handler """
+
+    def __init__(self, subset, **kwargs):
+        super().__init__(subset, sub_datasets=DB, **kwargs)
 
 
 class MiniPatch(BasePrepareDataset):

@@ -14,19 +14,17 @@ from collections import defaultdict
 
 import h5py
 import numpy as np
-import torch
-from gtorch_utils.datasets.generic import BaseDataset
-from gutils.numpy_.numpy_ import LabelMatrixManager
+from gtorch_utils.constants import DB
 from PIL import Image
 from tqdm import tqdm
 
 import settings
 from constants.constants import PCamLabel, PCamSubDataset
 from core.exceptions.dataset import PCamImageNameInvalid
+from utils.datasets.base import BaseTorchDataset
 from utils.datasets.bach import BasePrepareDataset as BachBasePrepareDataset
 from utils.datasets.mixins import CreateJSONFilesMixin
-from utils.utils import clean_create_folder, load_codes, clean_json_filename, \
-    get_filename_and_extension
+from utils.utils import clean_create_folder
 
 
 class HDF5_2_PNG(PCamSubDataset):
@@ -250,46 +248,8 @@ class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     """
 
 
-class PCamTorchDataset(BaseDataset):
-    """  """
+class PCamTorchDataset(BaseTorchDataset):
+    """ PatchCamelyon torch dataset handler """
 
     def __init__(self, subset, **kwargs):
-        """
-        Loads the subdataset
-
-        Args:
-           filename_pattern (str): filename with .json extension used to create the codes
-                                   when the calling the create_datasets_for_LC_KSVD method.
-           code_type   (CodeType): Code type used. See constants.constants.CodeType class defition
-        """
-        assert subset in PCamSubDataset.SUB_DATASETS
-        self.subset = subset
-        filename_pattern = kwargs.get('filename_pattern')
-        assert isinstance(filename_pattern, str)
-
-        code_type = kwargs.get('code_type')
-        cleaned_filename = clean_json_filename(filename_pattern)
-        name, extension = get_filename_and_extension(cleaned_filename)
-        file_name = '{}_{}.{}'.format(name, subset, extension)
-        self.data = load_codes(file_name, type_=code_type)
-        self.data['labels'] = LabelMatrixManager.get_1d_array_from_2d_matrix(self.data['labels'])
-
-    def __len__(self):
-        """
-        Returns:
-            dataset size (int)
-        """
-        return self.data['labels'].shape[0]
-
-    def __getitem__(self, idx):
-        """
-        Returns:
-            dict(feats=..., label=...)
-        """
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        return dict(
-            feats=torch.from_numpy(self.data['codes'][:, idx].ravel()).float(),
-            label=self.data['labels'][idx]
-        )
+        super().__init__(subset, sub_datasets=PCamSubDataset, **kwargs)
