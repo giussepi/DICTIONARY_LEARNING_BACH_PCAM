@@ -6,15 +6,16 @@ from __future__ import print_function, division
 import copy
 import json
 import os
-import time
 
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.optim import lr_scheduler
 import torchvision
+from gutils.decorators import timing
+from gtorch_utils.constants import DB
+from torch.optim import lr_scheduler
 from torchvision import models
 from tqdm import tqdm
 
@@ -26,7 +27,7 @@ from utils.datasets.bach import BACHDataset
 from utils.utils import get_filename_and_extension, clean_json_filename
 
 
-class TransferLearningResnet18(TransformsMixins):
+class TransferLearningResnet18(DB, TransformsMixins):
     """"
     Manages the resnet18 by applying transfer learning and optionally fine tuning
 
@@ -41,19 +42,10 @@ class TransferLearningResnet18(TransformsMixins):
         model.test()
 
         model2 = TransferLearningResnet18(fine_tune=True)
-        model2.load('weights/resnet18_fine_tuned.pt')
+        model2.load('fine_tuned_resnet18.pt')
         model.visualize_model()
         model2.test()
     """
-    # TODO: Create unit tests with a very small dataset
-    TRAIN = 'train'
-    # VALIDATION = 'validation'
-    # NOTE: test during training refers to the validtion dataset; but during
-    #       testing it refers to the test dataset
-    # TODO: modify the code to consider test and validation separately and properly
-    TEST = 'test'
-
-    SUB_DATASETS = [TRAIN, TEST]
 
     def __init__(self, *args, **kwargs):
         """
@@ -64,7 +56,8 @@ class TransferLearningResnet18(TransformsMixins):
             device  (torch.device): device were model will executed
             fine_tune       (bool): whether perform fine-tuning or use the ConvNet as a fixed feature extractor
         """
-        self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
+        self.data_transforms = kwargs.get(
+            'data_transforms', self.get_default_data_transforms(torch_pretrained=True))
         assert isinstance(self.data_transforms, dict)
         self.device = kwargs.get('device', torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
         assert isinstance(self.device, torch.device)
@@ -98,8 +91,7 @@ class TransferLearningResnet18(TransformsMixins):
 
         # Changing last layer
         self.model.fc = nn.Linear(self.num_ftrs, len(Label.CHOICES))
-
-        self.model = self.model.to(self.device)
+        self.model.to(self.device)
         self.criterion = nn.CrossEntropyLoss()
 
         if self.fine_tune:
@@ -145,10 +137,15 @@ class TransferLearningResnet18(TransformsMixins):
         self.imshow(out, title=[Label.get_name(x.item()) for x in classes])
 
     def load(self, state_dict_path):
-        """ Reads and loads the model state dictionary provided """
-        assert os.path.isfile(state_dict_path)
+        """
+        Reads and loads the model state dictionary provided. It must be placed
+        in the folder defined at settings.MODEL_SAVE_FOLDER
+        """
+        path = os.path.join(settings.MODEL_SAVE_FOLDER, state_dict_path)
+        assert os.path.isfile(path)
 
-        self.model.load_state_dict(torch.load(state_dict_path))
+        self.model.load_state_dict(torch.load(path))
+        self.model.to(self.device)
 
     def save(self, filename):
         """
@@ -157,11 +154,15 @@ class TransferLearningResnet18(TransformsMixins):
         Args:
             filename (str): filename with '.pt' extension
         """
+        if not os.path.isdir(settings.MODEL_SAVE_FOLDER):
+            os.makedirs(settings.MODEL_SAVE_FOLDER)
+
         assert isinstance(filename, str)
         assert filename.endswith('.pt')
 
         torch.save(self.model.state_dict(), os.path.join(settings.MODEL_SAVE_FOLDER, filename))
 
+    @timing
     def train(self, num_epochs=25):
         """
         * Trains and evaluates the model
@@ -173,7 +174,6 @@ class TransferLearningResnet18(TransformsMixins):
         assert isinstance(num_epochs, int)
         assert num_epochs > 0
 
-        since = time.time()
         best_model_wts = copy.deepcopy(self.model.state_dict())
         best_acc = 0.0
 
@@ -182,7 +182,7 @@ class TransferLearningResnet18(TransformsMixins):
             print('-' * 10)
 
             # Each epoch has a training and validation phase
-            for phase in [self.TRAIN, self.TEST]:
+            for phase in [self.TRAIN, self.VALIDATION]:
                 if phase == self.TRAIN:
                     self.model.train()  # Set model to training mode
                 else:
@@ -224,24 +224,22 @@ class TransferLearningResnet18(TransformsMixins):
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
                 # deep copy the model
-                if phase == self.TEST and epoch_acc > best_acc:
+                if phase == self.VALIDATION and epoch_acc > best_acc:
                     best_acc = epoch_acc
                     best_model_wts = copy.deepcopy(self.model.state_dict())
 
             print()
 
-        time_elapsed = time.time() - since
-        print('Training complete in {:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
         print('Best test Acc: {:4f}'.format(best_acc))
 
         # load best model weights
         self.model.load_state_dict(best_model_wts)
 
+    @timing
     def test(self):
         """
         Test the model and prints the results
         """
-        since = time.time()
         self.model.eval()
         corrects = 0
 
@@ -257,10 +255,6 @@ class TransferLearningResnet18(TransformsMixins):
 
         accuracy = corrects.double() / self.dataset_sizes[self.TEST]
         print('Acc: {:.4f}'.format(accuracy))
-
-        time_elapsed = time.time() - since
-        print('Testing complete in {:.0f}m {:.0f}s'.format(
-            time_elapsed // 60, time_elapsed % 60))
 
     def get_CNN_codes(self, sub_dataset):
         """
@@ -288,7 +282,7 @@ class TransferLearningResnet18(TransformsMixins):
 
         for data in tqdm(self.dataloaders[sub_dataset]):
             inputs = data['image'].to(self.device)
-            all_labels.append(data['target'])
+            all_labels.append(copy.deepcopy(data['target']))
 
             with torch.no_grad():
                 self.model(inputs)
@@ -323,7 +317,7 @@ class TransferLearningResnet18(TransformsMixins):
             filename           (str): Filename with .json extension
 
         Returns:
-            {'<sub_dataset>': [cnn codes list of lists, labels list]}
+            {'<sub_dataset>': [codes list of lists, labels list]}
 
         """
         assert sub_dataset in self.SUB_DATASETS
@@ -343,7 +337,7 @@ class TransferLearningResnet18(TransformsMixins):
 
         # Workaround to serialize numpy arrays as JSON
         formatted_data = {
-            'cnn_codes': formatted_cnn_codes.tolist(),
+            'codes': formatted_cnn_codes.tolist(),
             'labels': formatted_labels.tolist()
         }
 
@@ -402,7 +396,7 @@ class TransferLearningResnet18(TransformsMixins):
 
         Usage:
             model = TransferLearningResnet18(fine_tune=True)
-            model.load('weights/resnet18_fine_tuned.pt')
+            model.load('fine_tuned_resnet18.pt')
             model.create_datasets_for_LC_KSVD('my_dataset.json')
         """
         all_cnn_codes = self.get_all_CNN_codes()

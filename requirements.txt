@@ -15,6 +15,7 @@ torchvision
 scikit-learn
 scikit-cuda
 scipy
+h5py>=2.10.0
 ipython
 jupyter
 pandas
@@ -23,3 +24,5 @@ nose
 torch
 torchvision
 scikit-image
+lcksvd @ https://github.com/giussepi/LC-KSVD/tarball/master
+gtorch_utils @ https://github.com/giussepi/gtorch_utils/tarball/main

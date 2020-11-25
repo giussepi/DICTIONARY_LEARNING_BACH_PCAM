@@ -1,80 +1,164 @@
 # -*- coding: utf-8 -*-
 """  """
 
-import numpy as np
 import os
-from sklearn.metrics import accuracy_score
+from collections import OrderedDict
 
-from constants.constants import CodeType, ProcessImageOption
-from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
-from dl_algorithms.lc_ksvd.dksvd import DKSVD
+import numpy as np
+from gtorch_utils.constants import DB
+from gtorch_utils.models.managers import ModelMGR
+from gtorch_utils.models.perceptrons import Perceptron, MLP
+from lcksvd.dksvd import DKSVD
+from sklearn.metrics import accuracy_score
+from torch import optim
+
 import settings
-from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainTestSplit, RawImages, RandomFaces, WholeImage, RescaleResize
+from constants.constants import CodeType, ProcessImageOption, PCamLabel, PCamSubDataset, Label
+from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
+from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainValTestSplit, \
+    RawImages, RandomFaces, WholeImage, RescaleResize, BachTorchDataset
+from utils.datasets.pcam import WholeImage as PCamWholeImage, HDF5_2_PNG, FormatProvidedDatasetSplits, \
+    PCamTorchDataset
 from utils.utils import load_codes
 
 
 def main():
     """  """
-    # TODO: the first we need to perform the train/test split and then create the minipatches
-    RescaleResize(.0625)()
+    ###########################################################################
+    #                      Example PatchCamelyon dataset                       #
+    ###########################################################################
 
-    plot_n_first_json_images(15, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
-                             (9, 9), False, 'my_folder', False, True, remove_axes=False, dpi=100)
-    # plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
-    #                          (9, 9), True, 'my_folder', True, True)
-    TrainTestSplit()()
+    # HDF5_2_PNG(only_center=True)()
+    # FormatProvidedDatasetSplits()()
+    # PCamWholeImage()()
+
+    ###########################################################################
+    #                          Example BACH dataset                           #
+    ###########################################################################
+
+    # RescaleResize(.0625)()
+    # TrainValTestSplit()()
+
+    # create ROI files
+    # option 1
+    # WholeImage()()
+    # option 2
     # MiniPatch()()
-    WholeImage()()
 
     ###########################################################################
-    #                                 fsadfsdf                                #
+    #                            General operations                           #
     ###########################################################################
-    # OUTPUT_FOLDER LABELS_FILENAME
-    # output/{train/test}/labels.json  {'filename': label}
-    ri = RawImages(process_method=ProcessImageOption.GRAYSCALE)
-    ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
-    # randfaces = RandomFaces(img_height=512, img_width=512, concat_channels=False)
+
+    # plot_n_first_json_images(15, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME),
+    #                          (9, 9), False, 'my_folder', False, True, remove_axes=False, dpi=100)
+
+    # Feature extraction ######################################################
+    # option 1: raw images
+    # BATCH
+    # ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
+    # PatchCamelyon
+    # ri = RawImages(process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+    # ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+
+    # option 2: using random faces
+    # BATCH
+    # randfaces = RandomFaces(img_height=512, img_width=512,
+    #                         process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
+    # PatchCamelyon
+    # randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.GRAYSCALE,
+    #                         label_class=PCamLabel, sub_datasets=PCamSubDataset)
     # randfaces.create_datasets_for_LC_KSVD('randfaces_dataset.json')
-    # TODO: REview if float64 is used all over the app
-    ###########################################################################
 
-    # faces projected to 504 dimensional vector, original crops 192x168 (32256)
+    # option 3: using CNN codes
+    #
+    # # download and save the pre-trained resnet 18
+    # model = TransferLearningResnet18(fine_tune=False)
+    # model.save('resnet18_feature_extractor.pt')
+    #
+    # # Fine tune resnet18
+    # model = TransferLearningResnet18(fine_tune=True)
+    # model.training_data_plot_grid()
+    # model.train(num_epochs=25)
+    # model.save('fine_tuned_resnet18.pt')
+    # model.visualize_model()
+    # model.test()
+    #
+    # # Create CNN codes
+    # model = TransferLearningResnet18(fine_tune=True)
+    # model.load('fine_tuned_resnet18.pt')
+    # model.create_datasets_for_LC_KSVD('my_cnn_dataset.json')
 
-    # I need 512 features vectors to be used by LK-KSVD
-    # I'll perform feature extraction using Resnet18
+    # Load features extracted
+    # Example loading raw features (created using RawImages)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # print(test['codes'].shape)
+    # print(test['labels'].shape)
 
-    # data['featureMat'].shape (504 vector, 2414 images)
-    # data['labelMat'].shape (38 persons, 2414 images)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # print(train['codes'].shape)
+    # print(train['labels'].shape)
 
-    # H_train = sp.zeros((int(labels.max()), training_feats.shape[1]), dtype=float)
-    # for c in range(int(labels.max())):
-    #     H_train[c, labels == (c+1)] = 1.
+    # valid = load_codes('my_raw_dataset_valid.json', type_=CodeType.RAW)
+    # print(valid['codes'].shape)
+    # print(valid['labels'].shape)
 
 
 if __name__ == '__main__':
     main()
+
+    # Using extracted feature with several algorithms/models
+
+    ###########################################################################
+    #                                 Resnet18                                #
+    ###########################################################################
+    # # download and save the pre-trained resnet 18
+    # model = TransferLearningResnet18(fine_tune=False)
+    # model.save('resnet18_feature_extractor.pt')
+
+    # # fine tunning
     # model = TransferLearningResnet18(fine_tune=True)
     # model.training_data_plot_grid()
     # model.train(num_epochs=25)
-    # model.save('restnet18_feature_extractor_2.pt')
-    # model.load('weights/resnet18_feature_extractor.pt')
-    # model.load('weights/resnet18_fine_tuned_2.pt')
-    # model.test()
+    # model.save('fine_tuned_resnet18.pt')
     # model.visualize_model()
+    # model.test()
 
-    # model.create_datasets_for_LC_KSVD('attempt3.json')
-    test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
-    # test['codes'].shape  # (512, 2100)
-    # test['labels'].shape  # (4, 2100)
+    # # Load a resnet18 as a fixed feature extractor
+    # model2 = TransferLearningResnet18(fine_tune=False)
+    # model2.load('resnet18_feature_extractor.pt')
+    # # model2.visualize_model()
+    # model2.test()
 
-    train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
-    # train['codes'].shape  # (512, 11900)
-    # train['labels'].shape  # (4, 11900)
+    # # Creating CNN codes
+    # model = TransferLearningResnet18(fine_tune=True)
+    # model.load('fine_tuned_resnet18.pt')
+    # model.create_datasets_for_LC_KSVD('mydataset.json')
+
+    # # LOAD CODES
+    # test = load_codes('mydataset_test.json', type_=CodeType.CNN)
+    # print(test['codes'].shape)
+    # print(test['labels'].shape)
+
+    # train = load_codes('mydataset_train.json', type_=CodeType.CNN)
+    # print(train['codes'].shape)
+    # print(train['labels'].shape)
+
+    # val = load_codes('mydataset_val.json', type_=CodeType.CNN)
+    # print(train['codes'].shape)
+    # print(train['labels'].shape)
 
     ###########################################################################
     #                                 LC-KSVD1                                #
     ###########################################################################
-    # lcksvd = DKSVD(dictsize=570, timeit=True)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
+
+    # SPARSITYTHRES = 15
+    # lcksvd = DKSVD(
+    #     sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES,
+    #     sqrt_alpha=.0012, timeit=True
+    # )
     # Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
     # np.save('Dinit.npy', Dinit, False)
     # np.save('Tinit_T.npy', Tinit_T, False)
@@ -92,31 +176,104 @@ if __name__ == '__main__':
     ###########################################################################
     #                                 LC-KSVD2                                #
     ###########################################################################
-    lcksvd = DKSVD(dictsize=570, timeit=True)
-    Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
-    np.save('Dinit.npy', Dinit, False)
-    np.save('Tinit_T.npy', Tinit_T, False)
-    np.save('Winit_T.npy', Winit_T, False)
-    np.save('Q.npy', Q, False)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
 
-    Dinit = np.load('Dinit.npy')
-    Tinit_T = np.load('Tinit_T.npy')
-    Winit_T = np.load('Winit_T.npy')
-    Q = np.load('Q.npy')
-    D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
-    np.save('D_2.npy', D, False)
-    np.save('X_2.npy', X, False)
-    np.save('T_2.npy', T, False)
-    np.save('W_2.npy', W, False)
-    predictions, gamma = lcksvd.classification(D, W, test['codes'])
-    print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
-        accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
+    # SPARSITYTHRES = 15
+    # lcksvd = DKSVD(
+    #     sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES, timeit=True,
+    #     sqrt_alpha=.0012, sqrt_beta=.0012, tol=1e-6, iterations=50, iterations4ini=20
+    # )
+    # Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+    # np.save('Dinit.npy', Dinit, False)
+    # np.save('Tinit_T.npy', Tinit_T, False)
+    # np.save('Winit_T.npy', Winit_T, False)
+    # np.save('Q.npy', Q, False)
+
+    # Dinit = np.load('Dinit.npy')
+    # Tinit_T = np.load('Tinit_T.npy')
+    # Winit_T = np.load('Winit_T.npy')
+    # Q = np.load('Q.npy')
+    # D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+    # np.save('D_2.npy', D, False)
+    # np.save('X_2.npy', X, False)
+    # np.save('T_2.npy', T, False)
+    # np.save('W_2.npy', W, False)
+    # predictions, gamma = lcksvd.classification(D, W, test['codes'])
+    # print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
+    #     accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
 
     ###########################################################################
     #                                  D-KSVD                                 #
     ###########################################################################
-    # lcksvd = DKSVD(dictsize=570, timeit=True)
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+    # train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+    # val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
+
+    # SPARSITYTHRES = 15
+    # lcksvd = DKSVD(
+    #     sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES,
+    #     timeit=True
+    # )
     # Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
     # predictions, gamma = lcksvd.classification(Dinit, Winit, train['codes'])
     # print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
     #     accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
+
+    ###########################################################################
+    #                                Perceptron                               #
+    ###########################################################################
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+
+    # ModelMGR(
+    #     cuda=True,
+    #     model=Perceptron(test['codes'].shape[0], test['labels'].shape[0]),
+    #     sub_datasets=DB,  # PCamSubDataset
+    #     dataset=BachTorchDataset,  # PCamTorchDataset
+    #     dataset_kwargs=dict(filename_pattern='my_raw_dataset.json', code_type=CodeType.RAW),
+    #     batch_size=6,
+    #     shuffe=False,
+    #     num_workers=16,
+    #     optimizer=optim.SGD,
+    #     optimizer_kwargs=dict(lr=1e-5, momentum=.9),
+    #     lr_scheduler=None,
+    #     lr_scheduler_kwargs={},
+    #     epochs=600,
+    #     earlystopping_kwargs=dict(min_delta=1e-5, patience=5),
+    #     checkpoints=False,
+    #     checkpoint_interval=5,
+    #     checkpoint_path=OrderedDict(directory_path='tmp', filename=''),
+    #     saving_details=OrderedDict(directory_path='tmp', filename='best_model.pth'),
+    #     tensorboard=True
+    # )()
+
+    ###########################################################################
+    #                          Multi-layer Perceptron                          #
+    ###########################################################################
+    # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+
+    # ModelMGR(
+    #     cuda=True,
+    #     model=MLP(
+    #         test['codes'].shape[0], test['codes'].shape[0],
+    #         test['labels'].shape[0], dropout=.25, sigma=.1
+    #     ),
+    #     sub_datasets=DB,  # PCamSubDataset
+    #     dataset=BachTorchDataset,  # PCamTorchDataset
+    #     dataset_kwargs=dict(filename_pattern='my_raw_dataset.json', code_type=CodeType.RAW),
+    #     batch_size=6,
+    #     shuffe=False,
+    #     num_workers=16,
+    #     optimizer=optim.SGD,
+    #     optimizer_kwargs=dict(lr=1e-4, momentum=.9),
+    #     lr_scheduler=None,
+    #     lr_scheduler_kwargs={},
+    #     epochs=200,
+    #     earlystopping_kwargs=dict(min_delta=1e-6, patience=10),
+    #     checkpoints=False,
+    #     checkpoint_interval=5,
+    #     checkpoint_path=OrderedDict(directory_path='tmp'),
+    #     saving_details=OrderedDict(directory_path='tmp', filename='best_model.pth'),
+    #     tensorboard=True
+    # )()

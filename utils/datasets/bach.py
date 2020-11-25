@@ -15,18 +15,21 @@ from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
+import torch
+from gtorch_utils.constants import DB
+from gutils.datasets.utils import TrainValTestSplit as gutils_TrainValTestSplit
 from PIL import Image
 from skimage.color import rgb2gray
 from skimage.transform import rescale, resize
-from sklearn.model_selection import train_test_split
-import torch
 from torch.utils.data import Dataset
 from tqdm import tqdm
 
-from constants.constants import Label, ProcessImageOption, LabelItem
+import settings
+from constants.constants import Label, ProcessImageOption
 from core.exceptions.dataset import ImageNameInvalid
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
-import settings
+from utils.datasets.base import BaseTorchDataset
+from utils.datasets.mixins import CreateJSONFilesMixin
 from utils.files import get_name_and_extension
 from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
 from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension,\
@@ -113,10 +116,10 @@ class RescaleResize:
 
 class BasePrepareDataset:
     """
-    Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME
-    and settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME directories respectively. Also for creates the labels file
-    for each train and test directory.
+    Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME, and settings.TEST_SPLIT_FILENAME files, and saves them at
+    settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME and settings.TEST_FOLDER_NAME
+    directories respectively. Also for creates the labels file for each train and test directory.
 
     Use it as a base class to create your own ROI JSON files. Just make sure you override the
     _create_json_files method.
@@ -132,11 +135,16 @@ class BasePrepareDataset:
     def __init__(self, *args, **kwargs):
         """
         * Initializes the object
-        * Cleans the train and ouput folders (performs delete and create operations)
+        * Cleans the train, validation and test output folders (performs delete and create operations)
         """
         self.image_list = None
-        clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_FOLDER_NAME))
-        clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, settings.TEST_FOLDER_NAME))
+        self.split_files = [
+            settings.TRAIN_SPLIT_FILENAME, settings.VALID_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
+        self.folder_names = [
+            settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME, settings.TEST_FOLDER_NAME]
+
+        for folder in self.folder_names:
+            clean_create_folder(os.path.join(settings.OUTPUT_FOLDER, folder))
 
     def __call__(self):
         """ Functor call """
@@ -144,10 +152,9 @@ class BasePrepareDataset:
         self._create_json_files()
         self._create_labels()
 
-    @staticmethod
-    def read_split_file(filename):
+    def read_split_file(self, filename):
         """ Verifes the filename, loads the files and returns its content """
-        assert filename in [settings.TRAIN_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
+        assert filename in self.split_files
         filepath = os.path.join(settings.OUTPUT_FOLDER, filename)
         assert os.path.isfile(filepath)
 
@@ -158,25 +165,19 @@ class BasePrepareDataset:
 
     def _load_image_list(self):
         """
-        Loads the train test json files, creates the paths to the TIFF images into a list, and
-        assings the list to self.image_list.
+        Loads the train, validation, test json files, creates the paths to the TIFF images
+        into a list, and assings the list to self.image_list.
         """
         self.image_list = []
 
-        for filename, label in self.read_split_file(settings.TRAIN_SPLIT_FILENAME):
-            self.image_list.append((
-                os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
-                settings.TRAIN_FOLDER_NAME
-            ))
+        for split_filename, split_folder_name in zip(self.split_files, self.folder_names):
+            for filename, label in self.read_split_file(split_filename):
+                self.image_list.append((
+                    os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
+                    split_folder_name
+                ))
 
-        for filename, label in self.read_split_file(settings.TEST_SPLIT_FILENAME):
-            self.image_list.append((
-                os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
-                settings.TEST_FOLDER_NAME
-            ))
-
-    @staticmethod
-    def _create_image_json_file(filename, folder, source_filename, x, y, xmax, ymax):
+    def _create_image_json_file(self, filename, folder, source_filename, x, y, xmax, ymax):
         """
         Creates a roi json file at settings.OUTPUT_FOLDER + folder + filename using the provided
         arguments
@@ -188,7 +189,7 @@ class BasePrepareDataset:
             x, y, xmax, ymax (int): region of interest (roi) coordinates
         """
         assert isinstance(filename, str)
-        assert folder in [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]
+        assert folder in self.folder_names
         assert os.path.isfile(source_filename)
         assert isinstance(x, int)
         assert isinstance(y, int)
@@ -240,15 +241,13 @@ class BasePrepareDataset:
         #     )
         raise NotImplementedError
 
-    @staticmethod
-    def _create_labels():
+    def _create_labels(self):
         """
         Read the files from train and test folders and creates a dictionary with
         the format key: filename, value: label. Each dictionary is saved as a JSON
         file in their correspoding folder with the name settings.LABELS_FILENAME.
-
         """
-        for folder in [settings.TRAIN_FOLDER_NAME, settings.TEST_FOLDER_NAME]:
+        for folder in self.folder_names:
             folder_path = os.path.join(settings.OUTPUT_FOLDER, folder)
             filenames = os.listdir(folder_path)
             labels = []
@@ -272,11 +271,19 @@ class BasePrepareDataset:
                 json.dump(dict(zip(filenames, labels)), file_)
 
 
+class BachTorchDataset(BaseTorchDataset):
+    """ BACH torch dataset handler """
+
+    def __init__(self, subset, **kwargs):
+        super().__init__(subset, sub_datasets=DB, **kwargs)
+
+
 class MiniPatch(BasePrepareDataset):
     """
-    Creates minipatches for each TIFF files at settings.TRAIN_SPLIT_FILENAME and
-    settings.TEST_SPLIT_FILENAME and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
+    Creates minipatches for each TIFF file at settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME and saves them at
+    settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME and
+    settings.TEST_FOLDER_NAME folders respectively. Also for creates the labels file
     for each train and test folder.
 
     Usage:
@@ -336,12 +343,12 @@ class MiniPatch(BasePrepareDataset):
                 )
 
 
-class WholeImage(BasePrepareDataset):
+class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     """
-    Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME and
-    settings.TEST_SPLIT_FILENAME files, and saves them at settings.TRAIN_FOLDER_NAME and
-    settings.TRAIN_FOLDER_NAME folders respectively. Also for creates the labels file
-    for each train and test folder.
+    Creates JSON files covering the whole TIFF images from settings.TRAIN_SPLIT_FILENAME,
+    settings.VALID_SPLIT_FILENAME and settings.TEST_SPLIT_FILENAME files, and saves them
+    at settings.TRAIN_FOLDER_NAME and settings.TEST_FOLDER_NAME folders respectively.
+    Also for creates the labels file for each train and test folder.
 
     Use it to work with the whole images instead of patches.
 
@@ -349,38 +356,26 @@ class WholeImage(BasePrepareDataset):
         WholeImage()()
     """
 
-    def _create_json_files(self):
-        """
-        Reads the images from self.image_list and creates the
-        the WSI JSON files
-        """
-        print("Processing images to create whole image JSON files")
-        for image_path, folder in tqdm(self.image_list):
-            image = plt.imread(image_path)
-            h, w = image.shape[:2]
 
-            self._create_image_json_file(
-                self._format_clean_filename(image_path, 0, 0),
-                folder, image_path, 0, 0, w, h
-            )
-
-
-class TrainTestSplit:
+class TrainValTestSplit:
     """
-    Splits the dataset into train and test and saves them in CSV files
+    Splits the dataset into train, validation and test and saves them in CSV files
 
     Args:
         test_size   (float): test dataset size in range [0, 1]
+        val_size    (float): validation dataset size in range [0, 1]
 
     Usage:
-        TrainTestSplit(test_size=0.2)()
+        TrainValTestSplit()()
     """
 
     def __init__(self, *args, **kwargs):
         """ Initializes the instance """
         self.test_size = kwargs.get('test_size', settings.TEST_SIZE)
+        self.val_size = kwargs.get('val_size', settings.VAL_SIZE)
         assert isinstance(self.test_size, (float, int))
-        self.train_xy = self.test_xy = None
+        assert isinstance(self.val_size, (float, int))
+        self.train_xy = self.val_xy = self.test_xy = None
 
     def __call__(self):
         """
@@ -399,29 +394,39 @@ class TrainTestSplit:
                 settings.TRAIN_PHOTOS_GROUND_TRUTH, delimiter=',', dtype=np.str)
             pbar.update(1)
 
-        print("Splitting dataset with test = {}".format(self.test_size))
+        print("Splitting dataset with test = {} & val = {}".format(self.test_size, self.val_size))
+
         with tqdm(total=1) as pbar:
-            x_train, x_test, y_train, y_test = train_test_split(
-                ground_truth[:, 0], ground_truth[:, 1], test_size=self.test_size,
-                random_state=settings.RANDOM_STATE, stratify=ground_truth[:, 1]
-            )
+            x_train, x_val, x_test, y_train, y_val, y_test = gutils_TrainValTestSplit(
+                ground_truth[:, 0], ground_truth[:, 1], val_size=self.val_size,
+                test_size=self.test_size, random_state=settings.RANDOM_STATE,
+                shuffle=True, stratify=ground_truth[:, 1]
+            )()
+
             self.train_xy = np.hstack((
                 np.expand_dims(x_train, axis=1), np.expand_dims(y_train, axis=1)))
+            self.val_xy = np.hstack((
+                np.expand_dims(x_val, axis=1), np.expand_dims(y_val, axis=1)))
             self.test_xy = np.hstack((
                 np.expand_dims(x_test, axis=1), np.expand_dims(y_test, axis=1)))
             pbar.update(1)
 
     def __create_json_files(self):
-        """ Saves train and test datasets into JSON files """
-        print("Saving train/test datset into JSON files...")
+        """ Saves train, validation and test datasets into JSON files """
+        print("Saving train/validation/test dataset into JSON files...")
 
-        file_paths = [os.path.join(settings.OUTPUT_FOLDER, filename)
-                      for filename in [settings.TRAIN_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]]
+        file_paths = [
+            os.path.join(settings.OUTPUT_FOLDER, filename)
+            for filename in [
+                settings.TRAIN_SPLIT_FILENAME,
+                settings.VALID_SPLIT_FILENAME,
+                settings.TEST_SPLIT_FILENAME
+            ]
+        ]
 
         clean_create_folder(settings.OUTPUT_FOLDER)
 
-        for file_path in tqdm(file_paths):
-            data = self.train_xy if file_path.endswith(settings.TRAIN_SPLIT_FILENAME) else self.test_xy
+        for file_path, data in tqdm(zip(file_paths, (self.train_xy, self.val_xy, self.test_xy))):
             with open(file_path, 'w') as file_:
                 # Workaround to save numpy array without errors
                 json.dump(data.tolist(), file_)
@@ -468,38 +473,47 @@ class BACHDataset(Dataset):
 
 class BaseDatasetCreator(TransformsMixins):
     """ Holds basic handles to create a dataset """
-    TRAIN = 'train'
-    TEST = 'test'
-
-    SUB_DATASETS = [TRAIN, TEST]
 
     def __init__(self, *args, **kwargs):
         """
         Initializes the instance
         Kwargs:
-            data_transforms     (dict): data transformations to be applied. See TransformsMixins definition
-            codes_folder         (str): folder to store the generated codes
-            process_method (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
+            data_transforms      (dict): data transformations to be applied. See TransformsMixins definition
+            codes_folder          (str): folder to store the generated codes
+            process_method  (LabelItem): [Optional] processing option. See constants.constants.ProcessImageOption
+            label_class          (type): Label class (see constants/constants.py)
+            sub_datasets (object class): Class holding subdataset information.
+                                         See constants.constants.PCamSubDataset and gtorch_utils.constants.DB
         """
+        # TODO: verify the torch data adjustment is not necessary here
         self.data_transforms = kwargs.get('data_transforms', self.get_default_data_transforms())
+        self.label_class = kwargs.get('label_class', '')
+        assert isinstance(self.label_class, type)
         self.codes_folder = kwargs.get('codes_folder', '')
         self.process_method = kwargs.get('process_method', ProcessImageOption.MEAN)
+        sub_datasets = kwargs.get('sub_datasets', DB)
         assert isinstance(self.data_transforms, dict)
         assert isinstance(self.codes_folder, str)
         assert self.codes_folder != ''
         assert ProcessImageOption.is_valid_option(self.process_method)
+        assert hasattr(sub_datasets, 'SUB_DATASETS')
+        self.sub_datasets = sub_datasets.SUB_DATASETS
+
+        # TODO: maybe the transform should happen at the very end, not before calculating
+        #       sift descriptors
         self.image_datasets = {
             x: BACHDataset(
                 os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
-            for x in self.SUB_DATASETS
+            for x in self.sub_datasets
         }
+
         self.dataloaders = {
             x: torch.utils.data.DataLoader(
                 self.image_datasets[x], batch_size=settings.BATCH_SIZE,
                 shuffle=True, num_workers=settings.NUM_WORKERS)
-            for x in self.SUB_DATASETS
+            for x in self.sub_datasets
         }
-        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.SUB_DATASETS}
+        self.dataset_sizes = {x: len(self.image_datasets[x]) for x in self.sub_datasets}
 
     def process_input(self, input_):
         """
@@ -532,7 +546,7 @@ class BaseDatasetCreator(TransformsMixins):
             formatted_data['code'] must be a numpy array with shape [num_images, ]
         """
         # Example:
-        # assert dataset in self.SUB_DATASETS
+        # assert dataset in self.sub_datasets
         # assert isinstance(formatted_data, dict)
 
         #
@@ -565,9 +579,9 @@ class BaseDatasetCreator(TransformsMixins):
 
         formatted_data['codes'] = formatted_data['codes'].T
         formatted_labels = np.zeros(
-            (len(Label.CHOICES), formatted_data['labels'].shape[0]), dtype=float)
+            (len(self.label_class.CHOICES), formatted_data['labels'].shape[0]), dtype=float)
 
-        for index, label_item in enumerate(Label.CHOICES):
+        for index, label_item in enumerate(self.label_class.CHOICES):
             formatted_labels[index, formatted_data['labels'] == label_item.id] = 1
 
         # Workaround to serialize numpy arrays as JSON
@@ -587,7 +601,7 @@ class BaseDatasetCreator(TransformsMixins):
         name, extension = get_filename_and_extension(cleaned_filename)
 
         print("Formatting and saving sub-datasets codes for LC-KSVD")
-        for dataset in self.SUB_DATASETS:
+        for dataset in self.sub_datasets:
             print("Processing image's batches from sub-dataset: {}".format(dataset))
             new_name = '{}_{}.{}'.format(name, dataset, extension)
             formatted_data = {'codes': [], 'labels': []}
@@ -603,8 +617,17 @@ class RawImages(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using raw data
 
     Usage:
-    ri = RawImages(process_method=ProcessImageOption.MEAN)
-    ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+        from gtorch_utils.constants import DB
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
+
+        # for BACH
+        ri = RawImages(
+            process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
+        # for PatchCamelyon
+        ri = RawImages(
+            process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+
+        ri.create_datasets_for_LC_KSVD('my_raw_dataset.json')
     """
 
     def __init__(self, *args, **kwargs):
@@ -624,7 +647,7 @@ class RawImages(BaseDatasetCreator):
             dataset         (str): sub-dataset name
             formatted_data (dict): dictionary to store all codes and labels
         """
-        assert dataset in self.SUB_DATASETS
+        assert dataset in self.sub_datasets
         assert isinstance(formatted_data, dict)
 
         for data in tqdm(self.dataloaders[dataset]):
@@ -645,8 +668,15 @@ class RandomFaces(BaseDatasetCreator):
     Creates a dataset for LC-KSVD using random face descriptors
 
     Usage:
-        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.CONCATENATE)
-        randfaces.create_datasets_for_LC_KSVD('my_raw_dataset.json')
+        from gtorch_utils.constants import DB
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
+
+        # for BACH
+        randfaces = RandomFaces(img_height=512, img_width=512, process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB)
+        # for PatchCamelyon
+        randfaces = RandomFaces(img_height=32, img_width=32, process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset)
+
+        randfaces.create_datasets_for_LC_KSVD('randfaces_dataset.json')
     """
 
     def __init__(self, *args, **kwargs):
@@ -674,7 +704,7 @@ class RandomFaces(BaseDatasetCreator):
             dataset         (str): sub-dataset name
             formatted_data (dict): dictionary to store all codes and labels
         """
-        assert dataset in self.SUB_DATASETS
+        assert dataset in self.sub_datasets
         assert isinstance(formatted_data, dict)
 
         for data in tqdm(self.dataloaders[dataset]):
@@ -710,6 +740,8 @@ def read_roi_image(file_path):
             data['roi']['y']:data['roi']['y']+data['roi']['h'],
             data['roi']['x']:data['roi']['x']+data['roi']['w'],
         ]
+        if not image.flags['WRITEABLE']:
+            image = image.copy()
 
     return image
 
@@ -805,6 +837,10 @@ def plot_n_first_json_images(
         shutil.rmtree(save_folder_path)
 
     print("Plotting images")
+
     for image in tqdm(os.listdir(read_folder_path)[:n_images]):
-        plot_json_img(
-            os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path, carousel, remove_axes, dpi)
+        if image != settings.LABELS_FILENAME:
+            plot_json_img(
+                os.path.join(read_folder_path, image), figsize, save_to_disk, save_folder_path,
+                carousel, remove_axes, dpi
+            )

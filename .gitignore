@@ -1,10 +1,6 @@
 # numpy files
 *.npy
 
-# dl_algoriths
-dl_algorithms/*
-!dl_algorithms/__init__.py
-
 # model_weights
 weights
 
@@ -23,6 +19,7 @@ settings.py
 
 # dataset symlink
 datasets
+!utils/datasets
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
