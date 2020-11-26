@@ -4,7 +4,7 @@ Testing dictionary learning techniques vs perceptron and MLP using BACH and Patc
 
 ## Installation
 
-   1. Create a virtual environment (suggested) using virtualenv or virtualenvwrapper
+   1. Create a virtual environment (suggested) using [virtualenv](https://virtualenv.pypa.io/en/stable/) or [virtualenvwrapper](https://virtualenvwrapper.readthedocs.io/en/stable/)
 
    2. Activate your virtual environment
 
@@ -12,16 +12,20 @@ Testing dictionary learning techniques vs perceptron and MLP using BACH and Patc
 
        `pip install -r requirements.txt --use-feature=2020-resolver --no-cache-dir`
 
-   4. Copy settings.py.template into settings.py and set the general configuration settings properly
+   4. [Install the right pytorch version](https://pytorch.org/) for your CUDA vesion. To see your which CUDA version you have just run `nvcc -V`.
+
+   5. Download your datasets:
+
+      1. [ICIAR 2018 Grand Challenge on Breast Cancer Histology images](https://iciar2018-challenge.grand-challenge.org/Dataset/).
+
+      2. [PatchCamelyon (PCam) deep learning classification benchmark](https://github.com/basveeling/pcam)
+
+   5. Copy settings.py.template into settings.py and set the general configuration settings properly
 
 	  `$ cp settings.py.template settings.py`
 
 
 ## BACH_ICIAR_2018
-
-[ICIAR 2018 Grand Challenge on Breast Cancer Histology images](https://iciar2018-challenge.grand-challenge.org/Dataset/).
-
-## Usage
 
 ### Transform Dataset
 
@@ -297,8 +301,6 @@ AtomsPlotter(dictionary=D, img_width=128, img_height=96, n_rows=10, n_cols=16)()
 
 
 ## PatchCamelyon (PCam)
-
-[PatchCamelyon (PCam) deep learning classification benchmark](https://github.com/basveeling/pcam)
 
 Once you downloaded and updated your settings file properly you have to adapt/format the PCam dataset. Then,
 you can use any of tools defined after the BACH sub-section Plot/Save images
