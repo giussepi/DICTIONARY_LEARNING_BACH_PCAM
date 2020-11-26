@@ -1,28 +1,23 @@
 # emacs as python IDE
-jedi
-ipython
-pyflakes
-pylint
-autopep8
+jedi>=0.17.2
+ipython>=7.16.1
+pyflakes>=2.2.0
+pylint>=2.6.0
+autopep8>=1.5.4
 
 #
-matplotlib
-tqdm
-numpy
-# Pillow
-torch
-torchvision
-scikit-learn
-scikit-cuda
-scipy
+matplotlib>=3.3.0
+tqdm>=4.52.0
+numpy>=1.19.1
+Pillow>=7.2.0
+scikit-learn>=0.23.1
+scikit-image>=0.17.2
+scikit-cuda>=0.5.3
+scipy>=1.5.2
 h5py>=2.10.0
-ipython
-jupyter
-pandas
-sympy
-nose
-torch
-torchvision
-scikit-image
+jupyter>=1.0.0
+pandas>=1.1.4
+sympy>=1.6.1
+nose>=1.3.7
 lcksvd @ https://github.com/giussepi/LC-KSVD/tarball/master
 gtorch_utils @ https://github.com/giussepi/gtorch_utils/tarball/main
