@@ -166,7 +166,7 @@ ri = SparseCodes(
     process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset
     sparse_coding=DKSVD.get_sparse_representations,
     sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
-    )
+)
 
 ri.create_datasets_for_LC_KSVD('sparse_codes_dataset.json')
 ```
