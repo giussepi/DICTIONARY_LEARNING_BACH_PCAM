@@ -42,7 +42,7 @@ TEST_FOLDER_NAME = 'test'  # for minipatches
 HOLDBACK = 0.7
 SMALLLIM = 0.3
 CUT_SIZE = 512
-OVERLAP_COEFFICIENT = 0.5
+OVERLAP_COEFFICIENT = 0.5  # Set it to 1 for no overlapping
 # overlap must be an integer to avoid errors with the sliding window algorithm
 OVERLAP = int(OVERLAP_COEFFICIENT * CUT_SIZE)
 
