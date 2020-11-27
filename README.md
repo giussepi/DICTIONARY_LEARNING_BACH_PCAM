@@ -149,6 +149,28 @@ randfaces.create_datasets_for_LC_KSVD('my_randface_dataset.json')
 ```
 	Note: See function definition to pass the correct parameters
 
+#### Sparse codes
+``` python
+from gtorch_utils.constants import DB
+from lcksvd.dksvd import DKSVD
+from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
+
+# for BACH
+ri = SparseCodes(
+    process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB,
+    sparse_coding=DKSVD.get_sparse_representations,
+    sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
+)
+# for PatchCamelyon
+ri = SparseCodes(
+    process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset
+    sparse_coding=DKSVD.get_sparse_representations,
+    sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
+    )
+
+ri.create_datasets_for_LC_KSVD('sparse_codes_dataset.json')
+```
+
 #### CNN codes
 ##### Create datasets for LC_KSVD
 ```python

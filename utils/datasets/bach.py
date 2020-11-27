@@ -721,6 +721,70 @@ class RandomFaces(BaseDatasetCreator):
         formatted_data['labels'] = np.array(formatted_data['labels'])
 
 
+class SparseCodes(BaseDatasetCreator):
+    """
+    Creates a dataset for LC-KSVD using sparse codes
+
+    Usage:
+        from gtorch_utils.constants import DB
+        from lcksvd.dksvd import DKSVD
+        from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
+
+        # for BACH
+        ri = SparseCodes(
+            process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB,
+            sparse_coding=DKSVD.get_sparse_representations,
+            sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
+        )
+        # for PatchCamelyon
+        ri = SparseCodes(
+            process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset
+            sparse_coding=DKSVD.get_sparse_representations,
+            sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
+        )
+
+        ri.create_datasets_for_LC_KSVD('sparse_codes_dataset.json')
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the instance
+
+        Kwargs:
+            process_method (LabelItem): Optional processing option. See constants.constants.ProcessImageOption
+            sparse_coding (function/method): Sparse coding implementation
+            sparse_coding_kwargs (dict): Arguments for the sparse_coding implementation
+        """
+        super().__init__(*args, codes_folder=settings.SPARSE_CODES_FOLDER, **kwargs)
+        self.sparse_coding = kwargs.get('sparse_coding')
+        self.sparse_coding_kwargs = kwargs.get('sparse_coding_kwargs')
+
+    def process_data(self, dataset, formatted_data):
+        """
+        Processes the data properly and places it in formatted_data.
+
+        Args:
+            dataset         (str): sub-dataset name
+            formatted_data (dict): dictionary to store all codes and labels
+        """
+        assert dataset in self.sub_datasets
+        assert isinstance(formatted_data, dict)
+
+        for data in tqdm(self.dataloaders[dataset]):
+            inputs = data['image'].numpy()
+            labels = data['target'].numpy()
+
+            for input_, label in zip(inputs, labels):
+                processed_input = self.process_input(input_)
+                learned_representation = self.sparse_coding(
+                    processed_input, **self.sparse_coding_kwargs)
+                formatted_data['codes'].append(learned_representation.tolist())
+                formatted_data['labels'].append(label.tolist())
+
+        formatted_data['codes'] = np.array(formatted_data['codes'])
+        formatted_data['labels'] = np.array(formatted_data['labels'])
+
+
 def read_roi_image(file_path):
     """
     Reads the image from the roi_file and returns the ROI as a numpy array

@@ -89,12 +89,14 @@ class CodeType:
     RAW = LabelItem(0, 'Raw data')
     RANDFACE = LabelItem(1, 'Random-face feature descriptors')
     CNN = LabelItem(2, 'CNN codes')
+    SPARSE = LabelItem(3, 'Sparse codes')
 
-    CHOICES = (RAW.id, RANDFACE.id, CNN.id)
+    CHOICES = (RAW.id, RANDFACE.id, CNN.id, SPARSE.id)
     TEMPLATES = {
         RAW.id: settings.RAW_CODES_FOLDER,
         RANDFACE.id: settings.RANDOM_FACE_FOLDER,
-        CNN.id: settings.CNN_CODES_FOLDER
+        CNN.id: settings.CNN_CODES_FOLDER,
+        SPARSE.id: settings.SPARSE_CODES_FOLDER,
     }
 
     @classmethod
