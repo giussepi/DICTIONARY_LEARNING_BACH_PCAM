@@ -7,22 +7,22 @@ import os
 #                            General Configuration                            #
 ###############################################################################
 # path to the main dataset directory
-BASE_DATASET_LINK = os.path.join('datasets', 'PatchCamelyon (PCam)')
-# BASE_DATASET_LINK = os.path.join('datasets', 'ICIAR 2018 BACH challenge')
+# BASE_DATASET_LINK = os.path.join('datasets', 'PatchCamelyon (PCam)')  # PCam
+BASE_DATASET_LINK = os.path.join('datasets', 'ICIAR 2018 BACH challenge')  # BACH
 
 # path to the directory holding all the images grouped by labels in folders. e.g.
 # label1/<images labelled as label1>
 # label2/<images labelled as label2>
-TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'images')
-# TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos_0.0625')
+# TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'images')  # PCam
+TRAIN_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge', 'Photos_0.0625')  # BACH
 
 
 # path to CSV file with the images info. Each row should have:
 # <image name>.png,<label>
 # the image name should have the format:
 # <first letter of the label> + <id> + '.png'
-TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'full_ground_truth.csv')
-# TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv')
+# TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'full_ground_truth.csv')  # PCam
+TRAIN_PHOTOS_GROUND_TRUTH = os.path.join(TRAIN_PHOTOS_DATASET, 'microscopy_ground_truth.csv')  # BACH
 
 # TEST_PHOTOS_DATASET = os.path.join(BASE_DATASET_LINK, 'ICIAR2018_BACH_Challenge_TestDataset', 'Photos')
 
@@ -46,13 +46,14 @@ OVERLAP_COEFFICIENT = 0.5
 # overlap must be an integer to avoid errors with the sliding window algorithm
 OVERLAP = int(OVERLAP_COEFFICIENT * CUT_SIZE)
 
-TEST_SIZE = .65  # .75  # 0.15  # from the total
+TEST_SIZE = .15  # .65  # .75  # 0.15  # from the total
 VAL_SIZE = .10  # validation size  # from the total
 
 RANDOM_STATE = 42
 
 RAW_CODES_FOLDER = 'raw_codes'
 RANDOM_FACE_FOLDER = 'randface_codes'
+SPARSE_CODES_FOLDER = 'sparse_codes'
 FD_DIMENSION = 512  # dimension of random-face feature descriptor
 
 
@@ -60,11 +61,11 @@ FD_DIMENSION = 512  # dimension of random-face feature descriptor
 #                        dl_models.fine_tuned_resnet_18                       #
 ###############################################################################
 
-# BATCH_SIZE = 4  # BACH
-BATCH_SIZE = 32  # PatchCamelyon
+BATCH_SIZE = 4  # BACH
+# BATCH_SIZE = 32  # PatchCamelyon
 
-# NUM_WORKERS = 4  # BACH
-NUM_WORKERS = 12  # PatchCamelyon
+NUM_WORKERS = 4  # BACH
+# NUM_WORKERS = 12  # PatchCamelyon
 
 MODEL_SAVE_FOLDER = 'weights'
 CNN_CODES_FOLDER = 'cnn_codes'
