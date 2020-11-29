@@ -75,6 +75,14 @@ MiniPatch()()
 ```
 	Note: See class definition to pass the correct parameters
 
+#### Work with a fixed number of mini-patches per image
+``` python
+from utils.datasets.bach import SelectNRandomPatches
+
+# BACH only
+SelectNRandomPatches(100)()
+```
+
 ### Plot/Save images from json images
 ```python
 import os

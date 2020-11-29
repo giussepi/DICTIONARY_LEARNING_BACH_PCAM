@@ -9,6 +9,7 @@ https://iciar2018-challenge.grand-challenge.org/Dataset/
 
 import json
 import os
+import random
 import shutil
 from pathlib import Path
 
@@ -25,11 +26,10 @@ from torch.utils.data import Dataset
 from tqdm import tqdm
 
 import settings
-from constants.constants import Label, ProcessImageOption
-from core.exceptions.dataset import ImageNameInvalid
+from constants.constants import ProcessImageOption
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 from utils.datasets.base import BaseTorchDataset
-from utils.datasets.mixins import CreateJSONFilesMixin
+from utils.datasets.mixins import CreateJSONFilesMixin, ReadSplitFileMixin, CreateLabelsMixin
 from utils.files import get_name_and_extension
 from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
 from utils.utils import clean_create_folder, clean_json_filename, get_filename_and_extension,\
@@ -114,7 +114,7 @@ class RescaleResize:
         )
 
 
-class BasePrepareDataset:
+class BasePrepareDataset(CreateLabelsMixin, ReadSplitFileMixin):
     """
     Provides methods to create ROI JSON files for TIFF images from settings.TRAIN_SPLIT_FILENAME,
     settings.VALID_SPLIT_FILENAME, and settings.TEST_SPLIT_FILENAME files, and saves them at
@@ -150,18 +150,7 @@ class BasePrepareDataset:
         """ Functor call """
         self._load_image_list()
         self._create_json_files()
-        self._create_labels()
-
-    def read_split_file(self, filename):
-        """ Verifes the filename, loads the files and returns its content """
-        assert filename in self.split_files
-        filepath = os.path.join(settings.OUTPUT_FOLDER, filename)
-        assert os.path.isfile(filepath)
-
-        with open(filepath, 'r') as file_:
-            data = json.load(file_)
-
-        return data
+        self._create_labels(self.folder_names)
 
     def _load_image_list(self):
         """
@@ -171,7 +160,7 @@ class BasePrepareDataset:
         self.image_list = []
 
         for split_filename, split_folder_name in zip(self.split_files, self.folder_names):
-            for filename, label in self.read_split_file(split_filename):
+            for filename, label in self.read_split_file(split_filename, self.split_files):
                 self.image_list.append((
                     os.path.join(settings.TRAIN_PHOTOS_DATASET, label, filename),
                     split_folder_name
@@ -240,35 +229,6 @@ class BasePrepareDataset:
         #         folder, image_path, 0, 0, w, h
         #     )
         raise NotImplementedError
-
-    def _create_labels(self):
-        """
-        Read the files from train and test folders and creates a dictionary with
-        the format key: filename, value: label. Each dictionary is saved as a JSON
-        file in their correspoding folder with the name settings.LABELS_FILENAME.
-        """
-        for folder in self.folder_names:
-            folder_path = os.path.join(settings.OUTPUT_FOLDER, folder)
-            filenames = os.listdir(folder_path)
-            labels = []
-            print('Creating labels file for {} dataset'.format(folder))
-
-            for filename in tqdm(filenames):
-                if filename.startswith('b'):
-                    labels.append(Label.BENIGN.id)
-                elif filename.startswith('is'):
-                    labels.append(Label.INSITU.id)
-                elif filename.startswith('iv'):
-                    labels.append(Label.INVASIVE.id)
-                elif filename.startswith('n'):
-                    labels.append(Label.NORMAL.id)
-                else:
-                    raise ImageNameInvalid()
-
-            file_path = os.path.join(folder_path, settings.LABELS_FILENAME)
-
-            with open(file_path, 'w') as file_:
-                json.dump(dict(zip(filenames, labels)), file_)
 
 
 class BachTorchDataset(BaseTorchDataset):
@@ -355,6 +315,58 @@ class WholeImage(CreateJSONFilesMixin, BasePrepareDataset):
     Usage:
         WholeImage()()
     """
+
+
+class SelectNRandomPatches(CreateLabelsMixin, ReadSplitFileMixin):
+    """
+    Performs the selection N minipatches for each subdataset.
+
+    WARNING: it deletes all the non-selected patches and overrides their label files
+
+    Usage:
+        SelectNRandomPatches(100)()
+    """
+
+    def __init__(self, num_patches):
+        """
+        Initializes the object
+
+        Args:
+            num_patches (int): number of patches to be selected per image
+        """
+        assert isinstance(num_patches, int)
+        assert num_patches > 0
+        self.num_patches = num_patches
+        self.image_list = None
+        self.split_files = [
+            settings.TRAIN_SPLIT_FILENAME, settings.VALID_SPLIT_FILENAME, settings.TEST_SPLIT_FILENAME]
+        self.folder_names = [
+            settings.TRAIN_FOLDER_NAME, settings.VALID_FOLDER_NAME, settings.TEST_FOLDER_NAME]
+
+    def __call__(self):
+        """ functor call """
+        self.select_patches()
+        self._create_labels(self.folder_names)
+
+    def select_patches(self):
+        """ Selects the patches and removes the original subdataset labels files """
+
+        print("Selecting minipatches from subdatastes")
+        for split_filename, split_folder_name in tqdm(tuple(zip(self.split_files, self.folder_names))):
+            patches = os.listdir(os.path.join(settings.OUTPUT_FOLDER, split_folder_name))
+
+            for filename, _ in self.read_split_file(split_filename, self.split_files):
+                name, _ = get_filename_and_extension(filename)
+                file_patches = set(filter(lambda x: x.startswith('{}_'.format(name)), patches))
+                chosen_patches = set(random.sample(file_patches, k=self.num_patches))
+                patches_to_delete = file_patches.difference(chosen_patches)
+
+                for patch in patches_to_delete:
+                    os.remove(os.path.join(settings.OUTPUT_FOLDER, split_folder_name, patch))
+
+            # removing old labels file
+            os.remove(os.path.join(
+                settings.OUTPUT_FOLDER, split_folder_name, settings.LABELS_FILENAME))
 
 
 class TrainValTestSplit:

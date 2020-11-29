@@ -10,7 +10,6 @@ import string
 import numpy as np
 
 from constants.constants import CodeType
-import settings
 
 
 def remove_folder(folder_path):
@@ -104,7 +103,7 @@ def load_codes(filename, type_, numpy=True):
 
     Args:
         filename (str): Filename with json extension from settings.CNN_CODES_FOLDER
-        type_    (str): type of cnn code. See constants.constants.CodeType
+        type_    (str): type of codes. See constants.constants.CodeType
         numpy   (bool): Where to cast the lists to numpy arrays or not.
     Returns:
         {'codes': <list o lists or numpy array>, 'labels': <list or numpy array>}
