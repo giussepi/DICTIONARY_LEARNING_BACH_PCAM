@@ -43,7 +43,7 @@ class TransferLearningResnet18(DB, TransformsMixins):
         # Train by reading extracted codes
         model = TransferLearningResnet18(
             fine_tune=True, dataset_handler=BachTorchNetDataset,
-            code_type=CodeType.RAW, filename_pattern='my_raw_dataset.json'
+            dataset_kwargs=dict(code_type=CodeType.RAW, filename_pattern='my_raw_dataset.json')
         )
         #
         model.training_data_plot_grid()
