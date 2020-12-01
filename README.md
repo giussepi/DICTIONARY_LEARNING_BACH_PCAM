@@ -99,10 +99,7 @@ plot_n_first_json_images(5, os.path.join(settings.OUTPUT_FOLDER, settings.TRAIN_
 ``` python
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
-# download and save the pre-trained resnet 18
-model = TransferLearningResnet18(fine_tune=False)
-model.save('resnet18_feature_extractor.pt')
-
+# BACH only
 # example 1: Train a resnet18 using fine tuning
 model = TransferLearningResnet18(fine_tune=True)
 model.training_data_plot_grid()
@@ -112,6 +109,10 @@ model.visualize_model()
 model.test()
 
 # example 2: Load a resnet18 as a fixed feature extractor
+# download and save the pre-trained resnet 18
+model = TransferLearningResnet18(fine_tune=False)
+model.save('resnet18_feature_extractor.pt')
+# Load the fixed feature extractor
 model2 = TransferLearningResnet18(fine_tune=False)
 model2.load('resnet18_feature_extractor.pt')
 model2.visualize_model()
@@ -184,6 +185,7 @@ ri.create_datasets_for_LC_KSVD('sparse_codes_dataset.json')
 ```python
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 
+# BACH only
 model = TransferLearningResnet18(fine_tune=True)
 model.load('fine_tuned_resnet18.pt')
 model.create_datasets_for_LC_KSVD('my_cnn_dataset.json')
@@ -274,6 +276,30 @@ Dinit, Winit = lcksvd.initialization4DKSVD(*train.values())
 predictions, gamma = lcksvd.classification(Dinit, Winit, train['codes'])
 print('\nFinal recognition rate for D-KSVD is : {0:.4f}'.format(
     accuracy_score(np.argmax(train['labels'], axis=0), predictions)))
+```
+	Note: See function definition to pass the correct parameters
+
+### Run Resnet18
+```python
+
+from constants.constants import CodeType
+from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
+from utils.datasets.bach import BACHDataset, BachTorchNetDataset
+
+# BACH only
+# Train by reading images from disk
+model = TransferLearningResnet18(fine_tune=True)
+# or train by reading extracted codes (e.g. using raw codes)
+model = TransferLearningResnet18(
+    fine_tune=True, dataset_handler=BachTorchNetDataset,
+    code_type=CodeType.RAW, filename_pattern='my_raw_dataset.json'
+)
+#
+model.training_data_plot_grid()
+model.train(num_epochs=25)
+model.save('fine_tuned_resnet18.pt')
+model.visualize_model()
+model.test()
 ```
 	Note: See function definition to pass the correct parameters
 

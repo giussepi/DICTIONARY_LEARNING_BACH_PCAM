@@ -23,7 +23,7 @@ from constants.constants import Label
 from dl_models.fine_tuned_resnet_18 import constants as local_constants
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
 import settings
-from utils.datasets.bach import BACHDataset
+from utils.datasets.bach import BACHDataset, BachTorchNetDataset
 from utils.utils import get_filename_and_extension, clean_json_filename
 
 
@@ -34,13 +34,25 @@ class TransferLearningResnet18(DB, TransformsMixins):
     Inspired on: https://pytorch.org/tutorials/beginner/transfer_learning_tutorial.html
 
     Usage:
+        from constants.constants import CodeType
+        from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
+        from utils.datasets.bach import BACHDataset, BachTorchNetDataset
+
+        # Train by reading images from disk
         model = TransferLearningResnet18(fine_tune=True)
+        # Train by reading extracted codes
+        model = TransferLearningResnet18(
+            fine_tune=True, dataset_handler=BachTorchNetDataset,
+            code_type=CodeType.RAW, filename_pattern='my_raw_dataset.json'
+        )
+        #
         model.training_data_plot_grid()
         model.train(num_epochs=25)
-        model.save('mymodel.pt')
+        model.save('fine_tuned_resnet18.pt')
         model.visualize_model()
         model.test()
 
+        # Load model and test
         model2 = TransferLearningResnet18(fine_tune=True)
         model2.load('fine_tuned_resnet18.pt')
         model.visualize_model()
@@ -53,21 +65,35 @@ class TransferLearningResnet18(DB, TransformsMixins):
 
         Args:
             data_transforms (dict): for its structure see get_default_data_transforms method
+            dataset_handler (Dataset): Dataset handler to use. BACHDataset to load images, or
+                                       BachTorchNetDataset to load codes extracted
+            dataset_kwargs (dict): keyword arguments for the dataset_handler
             device  (torch.device): device were model will executed
             fine_tune       (bool): whether perform fine-tuning or use the ConvNet as a fixed feature extractor
         """
         self.data_transforms = kwargs.get(
             'data_transforms', self.get_default_data_transforms(torch_pretrained=True))
         assert isinstance(self.data_transforms, dict)
+        self.dataset_handler = kwargs.get('dataset_handler', BACHDataset)
+        assert self.dataset_handler in (BACHDataset, BachTorchNetDataset)
+        self.dataset_kwargs = kwargs.get('dataset_kwargs', {})
+        assert isinstance(self.dataset_kwargs, dict)
         self.device = kwargs.get('device', torch.device("cuda:0" if torch.cuda.is_available() else "cpu"))
         assert isinstance(self.device, torch.device)
         self.fine_tune = kwargs.get('fine_tune', False)
         assert isinstance(self.fine_tune, bool)
-        self.image_datasets = {
-            x: BACHDataset(
-                os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
-            for x in self.SUB_DATASETS
-        }
+
+        if self.dataset_handler == BACHDataset:
+            self.image_datasets = {
+                x: self.dataset_handler(
+                    os.path.join(settings.OUTPUT_FOLDER, x), transform=self.data_transforms[x])
+                for x in self.SUB_DATASETS
+            }
+        else:
+            self.image_datasets = {
+                x: self.dataset_handler(x, transform=self.data_transforms[x], **self.dataset_kwargs)
+                for x in self.SUB_DATASETS
+            }
         self.dataloaders = {
             x: torch.utils.data.DataLoader(
                 self.image_datasets[x], batch_size=settings.BATCH_SIZE,

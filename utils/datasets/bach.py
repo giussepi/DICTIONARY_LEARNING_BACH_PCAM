@@ -28,7 +28,7 @@ from tqdm import tqdm
 import settings
 from constants.constants import ProcessImageOption
 from dl_models.fine_tuned_resnet_18.mixins import TransformsMixins
-from utils.datasets.base import BaseTorchDataset
+from utils.datasets.base import BaseTorchDataset, BaseTorchNetDataset
 from utils.datasets.mixins import CreateJSONFilesMixin, ReadSplitFileMixin, CreateLabelsMixin
 from utils.files import get_name_and_extension
 from utils.feature_descriptors.random_faces import RandomFaces as RandFaces
@@ -233,6 +233,13 @@ class BasePrepareDataset(CreateLabelsMixin, ReadSplitFileMixin):
 
 class BachTorchDataset(BaseTorchDataset):
     """ BACH torch dataset handler """
+
+    def __init__(self, subset, **kwargs):
+        super().__init__(subset, sub_datasets=DB, **kwargs)
+
+
+class BachTorchNetDataset(BaseTorchNetDataset):
+    """ BACH torch dataset handler for models requiring images as inputs """
 
     def __init__(self, subset, **kwargs):
         super().__init__(subset, sub_datasets=DB, **kwargs)
