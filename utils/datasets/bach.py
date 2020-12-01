@@ -475,10 +475,9 @@ class BACHDataset(Dataset):
         img_name = os.path.join(self.root_dir, self.data.iloc[idx, 0])
         image = read_roi_image(img_name)
         target = np.array(self.data.iloc[idx, 1])
-        sample = {'image': image, 'target': target}
 
         if self.transform:
-            image = self.transform(sample['image'])
+            image = self.transform(image)
 
         return {'image': image, 'target': target}
 
