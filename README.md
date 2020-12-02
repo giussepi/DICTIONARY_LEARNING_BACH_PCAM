@@ -76,6 +76,9 @@ MiniPatch()()
 	Note: See class definition to pass the correct parameters
 
 #### Work with a fixed number of mini-patches per image
+
+Use it right after executing `MiniPatch()()`.
+
 ``` python
 from utils.datasets.bach import SelectNRandomPatches
 
@@ -159,11 +162,49 @@ randfaces.create_datasets_for_LC_KSVD('my_randface_dataset.json')
 	Note: See function definition to pass the correct parameters
 
 #### Sparse codes
-``` python
+
+This feature extractor requires a learned dictionary learning `D`. Thus, you
+should first train your dictionary learning algorithm (e.g.: LC-KSVD1,
+LC-KSVD2), save the learned dictionary as a NumPy file `np.save('D.npy', D,
+False)`; finally, use the learned dictionary `D` to create the sparse codes.
+
+```python
+import numpy as np
 from gtorch_utils.constants import DB
 from lcksvd.dksvd import DKSVD
-from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
 
+from constants.constants import ProcessImageOption, Label, PCamLabel, \
+    PCamSubDataset, CodeType
+from utils.datasets.bach import SparseCodes
+from utils.utils import load_codes
+
+
+# GETTING LEARNED DICTIONARY ##############################################
+test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+train = load_codes('my_raw_dataset_train.json', type_=CodeType.RAW)
+val = load_codes('my_raw_dataset_val.json', type_=CodeType.RAW)
+
+SPARSITYTHRES = 15
+lcksvd = DKSVD(
+    sparsitythres=SPARSITYTHRES, dictsize=train['labels'].shape[0]*SPARSITYTHRES, timeit=True,
+    sqrt_alpha=.0012, sqrt_beta=.0012, tol=1e-6, iterations=50, iterations4ini=20
+)
+Dinit, Tinit_T, Winit_T, Q = lcksvd.initialization4LCKSVD(*train.values())
+np.save('Dinit.npy', Dinit, False)
+np.save('Tinit_T.npy', Tinit_T, False)
+np.save('Winit_T.npy', Winit_T, False)
+np.save('Q.npy', Q, False)
+
+D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
+np.save('D.npy', D, False)
+np.save('X.npy', X, False)
+np.save('T.npy', T, False)
+np.save('W.npy', W, False)
+predictions, gamma = lcksvd.classification(D, W, test['codes'])
+print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
+    accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
+
+# CREATING SPARSE CODES ###################################################
 # for BACH
 ri = SparseCodes(
     process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB,
