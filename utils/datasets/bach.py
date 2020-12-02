@@ -747,6 +747,7 @@ class SparseCodes(BaseDatasetCreator):
         from gtorch_utils.constants import DB
         from lcksvd.dksvd import DKSVD
         from constants.constants import ProcessImageOption, Label, PCamLabel, PCamSubDataset
+        from utils.datasets.bach import SparseCodes
 
         # for BACH
         ri = SparseCodes(
