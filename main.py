@@ -16,7 +16,8 @@ import settings
 from constants.constants import CodeType, ProcessImageOption, PCamLabel, PCamSubDataset, Label
 from dl_models.fine_tuned_resnet_18.models import TransferLearningResnet18
 from utils.datasets.bach import plot_n_first_json_images, MiniPatch, TrainValTestSplit, \
-    RawImages, RandomFaces, WholeImage, RescaleResize, BachTorchDataset
+    RawImages, RandomFaces, SparseCodes, WholeImage, RescaleResize, BachTorchDataset, \
+    SelectNRandomPatches, BachTorchNetDataset, BACHDataset
 from utils.datasets.pcam import WholeImage as PCamWholeImage, HDF5_2_PNG, FormatProvidedDatasetSplits, \
     PCamTorchDataset
 from utils.utils import load_codes
@@ -44,6 +45,7 @@ def main():
     # WholeImage()()
     # option 2
     # MiniPatch()()
+    # SelectNRandomPatches(100)()
 
     ###########################################################################
     #                            General operations                           #
@@ -82,11 +84,27 @@ def main():
     # model.save('fine_tuned_resnet18.pt')
     # model.visualize_model()
     # model.test()
+
     #
     # # Create CNN codes
     # model = TransferLearningResnet18(fine_tune=True)
     # model.load('fine_tuned_resnet18.pt')
     # model.create_datasets_for_LC_KSVD('my_cnn_dataset.json')
+
+    # option 4: using sparse representations
+    # for BACH
+    # ri = SparseCodes(
+    #     process_method=ProcessImageOption.GRAYSCALE, label_class=Label, sub_datasets=DB,
+    #     sparse_coding=DKSVD.get_sparse_representations,
+    #     sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
+    # )
+    # for PatchCamelyon
+    # ri = SparseCodes(
+    #     process_method=ProcessImageOption.GRAYSCALE, label_class=PCamLabel, sub_datasets=PCamSubDataset
+    #     sparse_coding=DKSVD.get_sparse_representations,
+    #     sparse_coding_kwargs=dict(D=np.load('D.npy'), sparsitythres=15)
+    # )
+    # ri.create_datasets_for_LC_KSVD('sparse_codes_dataset.json')
 
     # Load features extracted
     # Example loading raw features (created using RawImages)
@@ -196,10 +214,10 @@ if __name__ == '__main__':
     # Winit_T = np.load('Winit_T.npy')
     # Q = np.load('Q.npy')
     # D, X, T, W = lcksvd.labelconsistentksvd2(train['codes'], Dinit, train['labels'], Q, Tinit_T, Winit_T)
-    # np.save('D_2.npy', D, False)
-    # np.save('X_2.npy', X, False)
-    # np.save('T_2.npy', T, False)
-    # np.save('W_2.npy', W, False)
+    # np.save('D.npy', D, False)
+    # np.save('X.npy', X, False)
+    # np.save('T.npy', T, False)
+    # np.save('W.npy', W, False)
     # predictions, gamma = lcksvd.classification(D, W, test['codes'])
     # print('\nFinal recognition rate for LC-KSVD2 is : {0:.4f}'.format(
     #     accuracy_score(np.argmax(test['labels'], axis=0), predictions)))
@@ -224,6 +242,7 @@ if __name__ == '__main__':
     ###########################################################################
     #                                Perceptron                               #
     ###########################################################################
+    # test = load_codes('sparse_codes_dataset_test.json', type_=CodeType.SPARSE)
     # test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
 
     # ModelMGR(
@@ -236,11 +255,11 @@ if __name__ == '__main__':
     #     shuffe=False,
     #     num_workers=16,
     #     optimizer=optim.SGD,
-    #     optimizer_kwargs=dict(lr=1e-5, momentum=.9),
+    #     optimizer_kwargs=dict(lr=1e-3, momentum=.9),
     #     lr_scheduler=None,
     #     lr_scheduler_kwargs={},
     #     epochs=600,
-    #     earlystopping_kwargs=dict(min_delta=1e-5, patience=5),
+    #     earlystopping_kwargs=dict(min_delta=1e-5, patience=15),
     #     checkpoints=False,
     #     checkpoint_interval=5,
     #     checkpoint_path=OrderedDict(directory_path='tmp', filename=''),
@@ -270,10 +289,30 @@ if __name__ == '__main__':
     #     lr_scheduler=None,
     #     lr_scheduler_kwargs={},
     #     epochs=200,
-    #     earlystopping_kwargs=dict(min_delta=1e-6, patience=10),
+    #     earlystopping_kwargs=dict(min_delta=1e-6, patience=15),
     #     checkpoints=False,
     #     checkpoint_interval=5,
     #     checkpoint_path=OrderedDict(directory_path='tmp'),
     #     saving_details=OrderedDict(directory_path='tmp', filename='best_model.pth'),
     #     tensorboard=True
     # )()
+
+    ###########################################################################
+    #                           Fine-tuned Resnet18                           #
+    ###########################################################################
+    # Train by reading images from disk
+    # model = TransferLearningResnet18(fine_tune=True)
+    # Train by reading extracted codes
+    # model = TransferLearningResnet18(
+    #     fine_tune=True, dataset_handler=BachTorchNetDataset,
+    #     dataset_kwargs=dict(
+    #         code_type=CodeType.SPARSE,
+    #         filename_pattern='sparse_codes_dataset.json',
+    #         original_shape=(1, 60)
+    #     )
+    # )
+    # model.training_data_plot_grid()
+    # model.train(num_epochs=25)
+    # model.save('fine_tuned_resnet18.pt')
+    # model.visualize_model()
+    # model.test()
