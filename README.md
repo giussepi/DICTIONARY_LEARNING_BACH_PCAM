@@ -283,7 +283,7 @@ from lc_ksvd.dksvd import DKSVD
 from sklearn.metrics import accuracy_score
 
 from constants.constants import CodeType
-from utils.utils import load_cnn_codes
+from utils.utils import load_codes
 
 train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
 val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
@@ -306,7 +306,7 @@ from lc_ksvd.dksvd import DKSVD
 from sklearn.metrics import accuracy_score
 
 from constants.constants import CodeType
-from utils.utils import load_cnn_codes
+from utils.utils import load_codes
 
 train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
 val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
@@ -348,6 +348,89 @@ model.test()
 ```
 	Note: See function definition to pass the correct parameters
 
+### Run Perceptron
+
+```python
+from collections import OrderedDict
+
+from gtorch_utils.constants import DB
+from gtorch_utils.models.managers import ModelMGR
+from gtorch_utils.models.perceptrons import Perceptron
+from torch import optim
+
+from constants.constants import CodeType
+from utils.datasets.bach import BachTorchDataset
+from utils.utils import load_codes
+
+
+test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+
+ModelMGR(
+    cuda=True,
+    model=Perceptron(test['codes'].shape[0], test['labels'].shape[0]),
+    sub_datasets=DB,  # PCamSubDataset
+    dataset=BachTorchDataset,  # PCamTorchDataset
+    dataset_kwargs=dict(filename_pattern='my_raw_dataset.json', code_type=CodeType.RAW),
+    batch_size=6,
+    shuffe=False,
+    num_workers=16,
+    optimizer=optim.SGD,
+    optimizer_kwargs=dict(lr=1e-3, momentum=.9),
+    lr_scheduler=None,
+    lr_scheduler_kwargs={},
+    epochs=600,
+    earlystopping_kwargs=dict(min_delta=1e-5, patience=15),
+    checkpoints=False,
+    checkpoint_interval=5,
+    checkpoint_path=OrderedDict(directory_path='tmp', filename=''),
+    saving_details=OrderedDict(directory_path='tmp', filename='best_model.pth'),
+    tensorboard=True
+)()
+```
+
+### Run Multilayer Perceptron
+```python
+from collections import OrderedDict
+
+from gtorch_utils.constants import DB
+from gtorch_utils.models.managers import ModelMGR
+from gtorch_utils.models.perceptrons import MLP
+from torch import optim
+
+from constants.constants import CodeType
+from utils.datasets.bach import BachTorchDataset
+from utils.utils import load_codes
+
+
+test = load_codes('my_raw_dataset_test.json', type_=CodeType.RAW)
+
+ModelMGR(
+    cuda=True,
+    model=MLP(
+        test['codes'].shape[0], test['codes'].shape[0],
+        test['labels'].shape[0], dropout=.25, sigma=.1
+    ),
+    sub_datasets=DB,  # PCamSubDataset
+    dataset=BachTorchDataset,  # PCamTorchDataset
+    dataset_kwargs=dict(filename_pattern='my_raw_dataset.json', code_type=CodeType.RAW),
+    batch_size=6,
+    shuffe=False,
+    num_workers=16,
+    optimizer=optim.SGD,
+    optimizer_kwargs=dict(lr=1e-4, momentum=.9),
+    lr_scheduler=None,
+    lr_scheduler_kwargs={},
+    epochs=200,
+    earlystopping_kwargs=dict(min_delta=1e-6, patience=15),
+    checkpoints=False,
+    checkpoint_interval=5,
+    checkpoint_path=OrderedDict(directory_path='tmp'),
+    saving_details=OrderedDict(directory_path='tmp', filename='best_model.pth'),
+    tensorboard=True
+)()
+```
+
+
 ### Visualization tools
 #### Visualize learned representations
 ``` python
@@ -357,7 +440,7 @@ from lc_ksvd.dksvd import DKSVD
 from lc_ksvd.utils.plot_tools import LearnedRepresentationPlotter
 
 from constants.constants import Label, COLOURS, CodeType
-from utils.utils import load_cnn_codes
+from utils.utils import load_codes
 
 train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
 val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
@@ -384,7 +467,7 @@ from lc_ksvd.dksvd import DKSVD
 from lc_ksvd.utils.plot_tools import AtomsPlotter
 
 from constants.constants import Label, COLOURS, CodeType
-from utils.utils import load_cnn_codes
+from utils.utils import load_codes
 
 train = load_codes('my_cnn_dataset_train.json', type_=CodeType.CNN)
 val = load_codes('my_cnn_dataset_val.json', type_=CodeType.CNN)
@@ -400,6 +483,13 @@ AtomsPlotter(dictionary=D, img_width=128, img_height=96, n_rows=10, n_cols=16)()
 ```
 	Note: See class definition to pass the correct parameters
 
+#### Visualize train and validation loss
+If you ran the Perceptron or MLP with tensorboard=True, then you can run tensorboard to see a nice plot:
+
+```bash
+sudo chmod +x run_tensorboard.sh
+./run_tensorboard.sh
+```
 
 ## PatchCamelyon (PCam)
 
