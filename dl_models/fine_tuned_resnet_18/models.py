@@ -40,10 +40,14 @@ class TransferLearningResnet18(DB, TransformsMixins):
 
         # Train by reading images from disk
         model = TransferLearningResnet18(fine_tune=True)
-        # Train by reading extracted codes
+        # Train by reading extracted raw codes from 64x64 mini-patches
         model = TransferLearningResnet18(
             fine_tune=True, dataset_handler=BachTorchNetDataset,
-            dataset_kwargs=dict(code_type=CodeType.RAW, filename_pattern='my_raw_dataset.json')
+            dataset_kwargs=dict(
+                code_type=CodeType.RAW,
+                filename_pattern='my_raw_dataset.json',
+                original_shape=(64, 64)
+            )
         )
         #
         model.training_data_plot_grid()

@@ -75,19 +75,24 @@ class BaseTorchNetDataset(BaseDataset):
         Loads the subdataset
 
         Args:
-           subset (str): sub dataset
-           sub_datasets ():
+           subset          (str): sub dataset
+           sub_datasets (object): class containing the subdatasets names
 
         Kwargs:
             filename_pattern (str): filename with .json extension used to create the codes
                                     when the calling the create_datasets_for_LC_KSVD method.
-            code_type   (CodeType): Code type used. See constants.constants.CodeType class defition
-            transforsm : transforms to be applied
+            code_type (CodeType): Code type used. See constants.constants.CodeType class defition
+            transforsm (torchvision.transforms.Compose) : transforms to be applied
+            original_shape (list, tuple): shape of the original image/data. If it was a 1D vector,
+                                          then just set it to (1, lenght)
         """
         assert subset in sub_datasets.SUB_DATASETS
         self.subset = subset
         filename_pattern = kwargs.get('filename_pattern')
         assert isinstance(filename_pattern, str)
+        self.original_shape = kwargs.get('original_shape')
+        assert isinstance(self.original_shape, (list, tuple))
+        assert len(self.original_shape) == 2
 
         code_type = kwargs.get('code_type')
         self.transform = kwargs.get('transform', None)
@@ -112,7 +117,7 @@ class BaseTorchNetDataset(BaseDataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        image = np.stack([self.data['codes'][:, idx].reshape(64, 64)]*3, axis=2)
+        image = np.stack([self.data['codes'][:, idx].reshape(*self.original_shape)]*3, axis=2)
         image = self.transform(image) if self.transform else torch.from_numpy(image)
 
         return dict(
