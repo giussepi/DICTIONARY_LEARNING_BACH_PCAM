@@ -528,3 +528,13 @@ from json images (including it).
 
 	WholeImage()()
 	```
+
+## Remove all .pyc files
+
+Once in a blue moon the pyc files does not get updated properly or there are very weird errors.
+When I ran out of ideas sometimes I get it fixed by removing all the .pyc files:
+
+```bash
+sudo chmod +x delete_pyc.sh
+./delete_pyc.sh
+```
